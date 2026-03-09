@@ -1,6 +1,8 @@
 # Cogeco_viz
 
-[Alpha Agentic Flow HTML](https://github.com/lcgenereux-mck/Cogeco_viz/blob/main/troubleshooting_workflow.html): Alpha MVP sequence diagram + agent details (HTML)
+[Alpha Agentic Flow HTML](https://github.com/lcgenereux-mck/Cogeco_viz/blob/main/Troubleshooting%20workflow%20architecture%20alpha.html): Alpha MVP prompt, input, outputs
+
+[Alpha Agentic Flow + sequence](https://github.com/lcgenereux-mck/Cogeco_viz/blob/main/troubleshooting_workflow.html): Alpha MVP sequence diagram + agent details (HTML)
 
 [path_to_final_vshare.html](https://github.com/lcgenereux-mck/Cogeco_viz/blob/main/path_to_final_vshare.html): Side-by-side environments and activities at each stage of publishing to prod
 
