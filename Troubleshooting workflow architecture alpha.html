@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Troubleshooting Workflow</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; height: 100vh; overflow: hidden; }
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    header { padding: 1rem 1.5rem; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 1.25rem; font-weight: 700; color: white; }
+    header p { font-size: 0.875rem; color: #94a3b8; }
+    .header-buttons { display: flex; gap: 0.75rem; }
+    .btn { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: #1e40af; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary.active { background: #2563eb; }
+    .btn-secondary { background: #334155; color: #cbd5e1; }
+    .btn-secondary:hover { background: #475569; color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .main-content { flex: 1; display: flex; overflow: hidden; }
+    .flow-pane { width: 30%; padding: 1rem; border-right: 1px solid #334155; }
+    .flow-container { height: 100%; background: #1e293b; border-radius: 0.5rem; position: relative; overflow: visible; }
+    .agent-node { position: absolute; padding: 0.75rem 1rem; border-radius: 0.5rem; border: 2px solid; width: 220px; height: 55px; cursor: pointer; transition: all 0.3s; z-index: 10; }
+    .agent-node:hover { transform: scale(1.02); }
+    .agent-node.selected { box-shadow: 0 0 0 2px rgba(255,255,255,0.5); }
+    .agent-node.active { animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    .agent-node-content { display: flex; align-items: center; gap: 0.75rem; }
+    .agent-icon { width: 32px; height: 32px; border-radius: 0.375rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .agent-icon svg { width: 18px; height: 18px; }
+    .agent-info { flex: 1; min-width: 0; }
+    .agent-name { font-size: 0.8rem; font-weight: 500; color: white; display: flex; align-items: center; gap: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; flex-shrink: 0; }
+    .status-dot.active { background: white; animation: blink 1s infinite; }
+    .status-dot.complete { background: white; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .agent-type { font-size: 0.7rem; color: #94a3b8; text-transform: capitalize; }
+    .node-root { border-color: #ec4899; background: rgba(236,72,153,0.2); }
+    .node-root .agent-icon { background: rgba(236,72,153,0.3); color: #f9a8d4; }
+    .node-root.active { box-shadow: 0 0 20px rgba(236,72,153,0.4); }
+    .node-interaction { border-color: #3b82f6; background: rgba(59,130,246,0.2); }
+    .node-interaction .agent-icon { background: rgba(59,130,246,0.3); color: #93c5fd; }
+    .node-interaction.active { box-shadow: 0 0 20px rgba(59,130,246,0.4); }
+    .node-retrieval { border-color: #22c55e; background: rgba(34,197,94,0.2); }
+    .node-retrieval .agent-icon { background: rgba(34,197,94,0.3); color: #86efac; }
+    .node-retrieval.active { box-shadow: 0 0 20px rgba(34,197,94,0.4); }
+    .node-tool { border-color: #eab308; background: rgba(234,179,8,0.2); }
+    .node-tool .agent-icon { background: rgba(234,179,8,0.3); color: #fde047; }
+    .node-tool.active { box-shadow: 0 0 20px rgba(234,179,8,0.4); }
+    .node-summary { border-color: #22c55e; background: rgba(34,197,94,0.2); }
+    .node-summary .agent-icon { background: rgba(34,197,94,0.3); color: #86efac; }
+    .node-summary.active { box-shadow: 0 0 20px rgba(34,197,94,0.4); }
+    .edges-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+    .edge { fill: none; stroke: #475569; stroke-width: 2; }
+    .edge.active { stroke: #3b82f6; stroke-width: 3; }
+    .edge.complete { stroke: #22c55e; }
+    .detail-pane { width: 70%; padding: 1rem; }
+    .detail-container { height: 100%; background: #1e293b; border-radius: 0.5rem; display: flex; flex-direction: column; overflow: hidden; }
+    .detail-placeholder { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; }
+    .detail-placeholder svg { width: 64px; height: 64px; margin-bottom: 1rem; opacity: 0.5; }
+    .detail-header { padding: 1rem 1.5rem; border-bottom: 1px solid #334155; display: flex; align-items: center; gap: 1rem; }
+    .detail-header-icon { width: 48px; height: 48px; border-radius: 0.5rem; background: #334155; display: flex; align-items: center; justify-content: center; color: #cbd5e1; }
+    .detail-header-icon svg { width: 24px; height: 24px; }
+    .detail-header h2 { font-size: 1.25rem; font-weight: 600; color: white; }
+    .detail-header p { font-size: 0.875rem; color: #94a3b8; }
+    .detail-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .detail-column { display: flex; flex-direction: column; gap: 1rem; }
+    .detail-section-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .detail-section-header svg { width: 20px; height: 20px; }
+    .detail-section-header h3 { font-size: 1rem; font-weight: 600; color: white; }
+    .detail-box { border-radius: 0.5rem; padding: 1rem; border: 1px solid; overflow-y: auto; max-height: 200px; }
+    .detail-box pre { font-family: monospace; font-size: 0.8rem; white-space: pre-wrap; word-break: break-word; line-height: 1.5; margin: 0; }
+    .detail-box.prompt { background: rgba(6,182,212,0.1); border-color: rgba(6,182,212,0.3); }
+    .detail-box.prompt pre { color: #a5f3fc; }
+    .prompt svg { color: #22d3ee; }
+    .detail-box.input { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.3); }
+    .detail-box.input pre { color: #bfdbfe; }
+    .input svg { color: #60a5fa; }
+    .detail-box.interim { background: rgba(249,115,22,0.1); border-color: rgba(249,115,22,0.3); }
+    .detail-box.interim pre { color: #fed7aa; }
+    .interim svg { color: #fb923c; }
+    .detail-box.output { background: rgba(34,197,94,0.1); border-color: rgba(34,197,94,0.3); }
+    .detail-box.output pre { color: #bbf7d0; }
+    .output svg { color: #4ade80; }
+    .detail-box.reasoning { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.3); }
+    .detail-box.reasoning pre { color: #fde68a; }
+    .reasoning svg { color: #fbbf24; }
+    .detail-box.tool { background: rgba(168,85,247,0.1); border-color: rgba(168,85,247,0.3); }
+    .detail-box.tool pre, .detail-box.tool code { color: #e9d5ff; font-family: monospace; font-size: 0.8rem; }
+    .tool svg { color: #a855f7; }
+    .tool-label { font-size: 0.7rem; color: #a855f7; text-transform: uppercase; font-weight: 500; margin: 0.5rem 0 0.25rem 0; }
+    .tool-value { background: rgba(15,23,42,0.5); border-radius: 0.25rem; padding: 0.5rem; max-height: 100px; overflow-y: auto; }
+    .placeholder-text { color: #64748b; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div><h1>Troubleshooting Workflow</h1><p>Multi-agent system with RAG-powered knowledge retrieval</p></div>
+      <div class="header-buttons">
+        <button class="btn btn-primary" id="runBtn" onclick="runScenario()">&#9654; Internet Troubleshooting</button>
+        <button class="btn btn-secondary" onclick="resetApp()">&#8634; Reset</button>
+      </div>
+    </header>
+    <div class="main-content">
+      <div class="flow-pane">
+        <div class="flow-container">
+          <!--
+            Box dimensions: 220px wide x 55px tall
+            Left column x: 40px (center at 150px, right edge at 260px)
+            Right column x: 300px (left edge at 300px)
+
+            Positions (top of box):
+            - root: 20px (bottom: 75px)
+            - customer_interaction: 130px (bottom: 185px) - gap: 55px
+            - knowledge_retrieval: 240px (bottom: 295px) - gap: 55px
+            - note_summary: 350px (bottom: 405px) - gap: 55px
+            - rag_kb_tool: 240px (aligned with knowledge_retrieval)
+          -->
+          <svg class="edges-svg">
+            <defs>
+              <marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon fill="#475569" points="0 0,10 3.5,0 7"/></marker>
+              <marker id="ahs" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon fill="#475569" points="10 0,0 3.5,10 7"/></marker>
+            </defs>
+            <!-- Root bottom (150, 75) to Customer Interaction top (150, 130) -->
+            <line id="e1" class="edge" x1="150" y1="75" x2="150" y2="130" marker-end="url(#ah)"/>
+            <!-- Customer Interaction bottom (150, 185) to Knowledge Retrieval top (150, 240) -->
+            <line id="e2" class="edge" x1="150" y1="185" x2="150" y2="240" marker-end="url(#ah)"/>
+            <!-- Knowledge Retrieval bottom (150, 295) to Note Summary top (150, 350) -->
+            <line id="e3" class="edge" x1="150" y1="295" x2="150" y2="350" marker-end="url(#ah)"/>
+            <!-- Knowledge Retrieval right (260, 267) to RAG KB Tool left (300, 267) - bidirectional -->
+            <line id="e4" class="edge" x1="260" y1="267" x2="300" y2="267" stroke-dasharray="5,5" marker-start="url(#ahs)" marker-end="url(#ah)"/>
+            <!-- Loopback: Knowledge Retrieval left (40, 267) to Customer Interaction left (40, 157) - curves outside boxes -->
+            <path id="e5" class="edge" d="M 40 267 C 5 267, 5 157, 40 157" fill="none" marker-end="url(#ah)" stroke-dasharray="6,4"/>
+          </svg>
+
+          <div class="agent-node node-root" id="n-root" style="left:40px;top:20px" onclick="selectAgent('root')">
+            <div class="agent-node-content">
+              <div class="agent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8M2 14h2M20 14h2M15 13v2M9 13v2"/></svg></div>
+              <div class="agent-info"><div class="agent-name">Root Agent <span class="status-dot" id="s-root"></span></div><div class="agent-type">root</div></div>
+            </div>
+          </div>
+
+          <div class="agent-node node-interaction" id="n-customer_interaction" style="left:40px;top:130px" onclick="selectAgent('customer_interaction')">
+            <div class="agent-node-content">
+              <div class="agent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+              <div class="agent-info"><div class="agent-name">Customer Interaction <span class="status-dot" id="s-customer_interaction"></span></div><div class="agent-type">interaction</div></div>
+            </div>
+          </div>
+
+          <div class="agent-node node-retrieval" id="n-knowledge_retrieval" style="left:40px;top:240px" onclick="selectAgent('knowledge_retrieval')">
+            <div class="agent-node-content">
+              <div class="agent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></div>
+              <div class="agent-info"><div class="agent-name">Knowledge Retrieval <span class="status-dot" id="s-knowledge_retrieval"></span></div><div class="agent-type">retrieval</div></div>
+            </div>
+          </div>
+
+          <div class="agent-node node-tool" id="n-rag_kb_tool" style="left:300px;top:240px" onclick="selectAgent('rag_kb_tool')">
+            <div class="agent-node-content">
+              <div class="agent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5M3 12a9 3 0 0 0 18 0"/></svg></div>
+              <div class="agent-info"><div class="agent-name">RAG KB Tool <span class="status-dot" id="s-rag_kb_tool"></span></div><div class="agent-type">tool</div></div>
+            </div>
+          </div>
+
+          <div class="agent-node node-summary" id="n-note_summary" style="left:40px;top:350px" onclick="selectAgent('note_summary')">
+            <div class="agent-node-content">
+              <div class="agent-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8"/></svg></div>
+              <div class="agent-info"><div class="agent-name">Session Summary <span class="status-dot" id="s-note_summary"></span></div><div class="agent-type">summary</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-pane">
+        <div class="detail-container">
+          <div class="detail-placeholder" id="placeholder">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8M2 14h2M20 14h2"/></svg>
+            <p style="font-size:1.1rem;color:#94a3b8">Select an agent to view details</p>
+            <p style="font-size:0.875rem;margin-top:0.5rem">Click on any node in the flow diagram</p>
+          </div>
+          <div id="detail" style="display:none;height:100%;flex-direction:column">
+            <div class="detail-header">
+              <div class="detail-header-icon" id="dIcon"></div>
+              <div><h2 id="dName"></h2><p id="dType"></p></div>
+            </div>
+            <div class="detail-content">
+              <div class="detail-grid">
+                <div class="detail-column">
+                  <div><div class="detail-section-header prompt"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg><h3>Prompt / Instruction</h3></div><div class="detail-box prompt"><pre id="pText"></pre></div></div>
+                  <div id="rSec" style="display:none"><div class="detail-section-header reasoning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4"/></svg><h3>Reasoning</h3></div><div class="detail-box reasoning"><pre id="rText"></pre></div></div>
+                </div>
+                <div class="detail-column">
+                  <div><div class="detail-section-header input"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14m-7-7 7 7-7 7"/></svg><h3>Input</h3></div><div class="detail-box input"><pre id="iText"></pre></div></div>
+                  <div id="intSec" style="display:none"><div class="detail-section-header interim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 12H3M16 6H3M16 18H3m16-8-4 4m0-4 4 4"/></svg><h3>Interim Output</h3></div><div class="detail-box interim"><pre id="intText"></pre></div></div>
+                  <div><div class="detail-section-header output"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7 7-7-7 7-7"/></svg><h3>Output</h3></div><div class="detail-box output"><pre id="oText"></pre></div></div>
+                  <div id="tSec" style="display:none"><div class="detail-section-header tool"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg><h3>Tool Call</h3></div><div class="detail-box tool"><div class="tool-label">Function</div><code id="tName"></code><div class="tool-label">Arguments</div><div class="tool-value"><pre id="tArgs"></pre></div><div class="tool-label">Result</div><div class="tool-value"><pre id="tRes"></pre></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+const A = {
+  root: {
+    name: 'Root Agent',
+    type: 'root',
+    typeLabel: 'Entry Point Agent',
+    instruction: 'You are the entry point for customer troubleshooting.\n\nWhen a customer message is received, immediately call customer_interaction_agent.'
+  },
+  customer_interaction: {
+    name: 'Customer Interaction Agent',
+    type: 'interaction',
+    typeLabel: 'Conversation Agent',
+    instruction: `Gather customer context through 3-4 conversational turns.
+
+**STEP 1: INTENT VALIDATION**
+First, determine if the user's intent matches one of our supported subjects:
+
+SUPPORTED SUBJECTS:
+1. Internet connectivity issues
+2. Modem/router troubleshooting
+3. WiFi signal problems
+4. Billing inquiries
+5. Account management
+6. Equipment upgrades
+7. Service outages
+8. Speed/performance issues
+9. Installation scheduling
+10. Plan changes/cancellations
+
+If user intent does NOT match any supported subject:
+→ STOP and respond: "I'm sorry, I can only help with [list subjects]. For other inquiries, please contact our general support line."
+→ Do NOT call knowledge_retrieval_agent
+
+**STEP 2: CONTEXT GATHERING** (only if intent matches)
+Collect:
+- Problem description
+- Customer identifier
+- Steps already tried
+- Specific symptoms (error messages, light colors)
+
+Call knowledge_retrieval_agent when you have sufficient context OR after 4 turns.`
+  },
+  knowledge_retrieval: {
+    name: 'Knowledge Retrieval Agent',
+    type: 'retrieval',
+    typeLabel: 'RAG Agent',
+    instruction: 'Retrieve troubleshooting guidance using multi-query RAG.\n\n1. DECOMPOSE: Break context into searchable components\n2. REWRITE: Generate 2-3 query variations per component\n3. RETRIEVE: Call rag_kb_tool multiple times with each query\n4. SYNTHESIZE: Merge results, deduplicate, filter out already-tried steps\n5. Call note_summary_agent with diagnosis and recommended steps.'
+  },
+  rag_kb_tool: {
+    name: 'RAG KB Tool',
+    type: 'tool',
+    typeLabel: 'Tool',
+    instruction: 'Vector search tool for knowledge base retrieval.\n\nInput: Search query string\nOutput: Top-k relevant documents from knowledge base\n\nUses semantic similarity to find troubleshooting guides, FAQs, and technical documentation.'
+  },
+  note_summary: {
+    name: 'Session Summary',
+    type: 'summary',
+    typeLabel: 'Summary Agent',
+    instruction: 'Summarize the session for Agent Desktop.\n\nUse session_log_retrieval to fetch conversation history and agent outputs.\n\nOutput: Customer ID, issue summary, root cause, resolution steps, status.'
+  }
+};
+
+const S = [
+  {
+    id: 'root',
+    input: 'User clicks "Internet Troubleshooting" button in DialogFlow',
+    output: 'Routing to Customer Interaction Agent for context gathering',
+    delay: 400
+  },
+  {
+    id: 'customer_interaction',
+    input: `Conversation Log:
+Turn 1:
+  Human: "Hi, my internet isn't working"
+  Agent: "Can you describe what's happening?"
+
+Turn 2:
+  Human: "The modem has a red blinking light"
+  Agent: "What troubleshooting steps have you tried?"
+
+Turn 3:
+  Human: "I tried unplugging it and waiting 30 seconds"
+  Agent: "Is this affecting all devices or just one?"
+
+Turn 4:
+  Human: "All devices, none can connect"
+  Agent: [STOPPING CONDITION MET]`,
+    output: `Customer reports internet not working.
+Symptoms: Red blinking light on modem, no devices can connect.
+Steps already tried: Power cycled modem.`,
+    reasoning: 'Collected sufficient context after 4 turns: identified symptoms, scope, and prior troubleshooting.',
+    delay: 800
+  },
+  {
+    id: 'knowledge_retrieval',
+    input: `Context Summary:
+Customer reports internet not working.
+Symptoms: Red blinking light on modem.
+Steps already tried: Power cycled modem.`,
+    interimOutput: `QUERIES GENERATED:
+- query_1: "modem red blinking light no internet"
+- query_2: "all devices unable to connect wifi troubleshooting"
+- query_3: "power cycle modem still not working next steps"`,
+    output: `Diagnosis: Red blinking light indicates no upstream signal. Next step is to check coax connection and perform factory reset.
+
+Verbatim Quotes:
+- "Red blinking light indicates no signal from ISP." (KB-2041)
+- "If power cycle fails, perform a factory reset." (KB-4022)`,
+    reasoning: 'Decomposed customer issue into 3 search queries. Retrieved relevant KB articles and synthesized diagnosis.',
+    delay: 600
+  },
+  {
+    id: 'rag_kb_tool',
+    input: `Queries:
+1. "modem red blinking light no internet"
+2. "all devices unable to connect"
+3. "power cycle modem still not working"`,
+    output: 'Retrieved 6 documents across 3 queries',
+    toolCall: {
+      name: 'rag_kb_search',
+      args: `{
+  "queries": ["modem red blinking light", "all devices unable to connect", "power cycle not working"],
+  "top_k": 2
+}`,
+      result: `{
+  "query_1": [{"doc_id":"KB-2041","content":"Red blinking light indicates no signal..."}],
+  "query_2": [{"doc_id":"KB-3101","content":"If all devices fail, issue is with modem..."}],
+  "query_3": [{"doc_id":"KB-4022","content":"If power cycle fails, perform factory reset..."}]
+}`
+    },
+    delay: 700
+  },
+  {
+    id: 'note_summary',
+    input: `Full Session Log:
+- Customer conversation (4 turns)
+- Context summary
+- Diagnosis and KB quotes`,
+    output: `ISSUE: Internet down - red blinking modem light
+
+SUMMARY: Customer reported outage with red blinking modem.
+
+ROOT CAUSE: No upstream signal from ISP.
+
+RESOLUTION: Check coax, factory reset, escalate if needed.
+
+SENTIMENT: Neutral
+URGENCY: Medium
+STATUS: Pending`,
+    reasoning: 'Synthesized full session into structured summary for Agent Desktop.',
+    delay: 600
+  }
+];
+
+const I = {
+  root: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M12 8V4H8M2 14h2M20 14h2"/></svg>',
+  interaction: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+  retrieval: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+  tool: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/></svg>',
+  summary: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>'
+};
+
+let sel = null, exec = {}, running = false;
+
+function selectAgent(id) {
+  document.querySelectorAll('.agent-node').forEach(n => n.classList.remove('selected'));
+  document.getElementById('n-' + id).classList.add('selected');
+  sel = id;
+  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('detail').style.display = 'flex';
+  const a = A[id];
+  document.getElementById('dIcon').innerHTML = I[a.type];
+  document.getElementById('dName').textContent = a.name;
+  document.getElementById('dType').textContent = a.typeLabel;
+  document.getElementById('pText').textContent = a.instruction;
+  const s = exec[id];
+  document.getElementById('iText').textContent = s?.input || 'Run a scenario to see input data';
+  document.getElementById('iText').className = s?.input ? '' : 'placeholder-text';
+  document.getElementById('intSec').style.display = s?.interimOutput ? 'block' : 'none';
+  if (s?.interimOutput) document.getElementById('intText').textContent = s.interimOutput;
+  document.getElementById('oText').textContent = s?.output || 'Run a scenario to see output data';
+  document.getElementById('oText').className = s?.output ? '' : 'placeholder-text';
+  document.getElementById('rSec').style.display = s?.reasoning ? 'block' : 'none';
+  if (s?.reasoning) document.getElementById('rText').textContent = s.reasoning;
+  document.getElementById('tSec').style.display = s?.toolCall ? 'block' : 'none';
+  if (s?.toolCall) {
+    document.getElementById('tName').textContent = s.toolCall.name;
+    document.getElementById('tArgs').textContent = s.toolCall.args;
+    document.getElementById('tRes').textContent = s.toolCall.result;
+  }
+}
+
+function setStatus(id, st) {
+  const d = document.getElementById('s-' + id), n = document.getElementById('n-' + id);
+  d.classList.remove('active', 'complete');
+  n.classList.remove('active');
+  if (st === 'active') { d.classList.add('active'); n.classList.add('active'); }
+  else if (st === 'complete') d.classList.add('complete');
+}
+
+function setEdge(i, st) {
+  const e = document.getElementById('e' + i);
+  if (!e) return;
+  e.classList.remove('active', 'complete');
+  if (st === 'active') e.classList.add('active');
+  else if (st === 'complete') e.classList.add('complete');
+}
+
+async function runScenario() {
+  if (running) return;
+  running = true;
+  document.getElementById('runBtn').disabled = true;
+  exec = {};
+  document.querySelectorAll('.status-dot').forEach(d => d.classList.remove('active', 'complete'));
+  document.querySelectorAll('.agent-node').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.edge').forEach(e => e.classList.remove('active', 'complete'));
+  const em = { customer_interaction: 1, knowledge_retrieval: 2, rag_kb_tool: 4, note_summary: 3 };
+  for (const s of S) {
+    setStatus(s.id, 'active');
+    if (em[s.id]) setEdge(em[s.id], 'active');
+    await new Promise(r => setTimeout(r, s.delay));
+    exec[s.id] = s;
+    setStatus(s.id, 'complete');
+    if (em[s.id]) setEdge(em[s.id], 'complete');
+    if (sel === s.id) selectAgent(s.id);
+  }
+  running = false;
+  document.getElementById('runBtn').disabled = false;
+}
+
+function resetApp() {
+  running = false;
+  exec = {};
+  sel = null;
+  document.getElementById('runBtn').disabled = false;
+  document.querySelectorAll('.status-dot').forEach(d => d.classList.remove('active', 'complete'));
+  document.querySelectorAll('.agent-node').forEach(n => n.classList.remove('active', 'selected'));
+  document.querySelectorAll('.edge').forEach(e => e.classList.remove('active', 'complete'));
+  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('detail').style.display = 'none';
+}
+</script>
+</body>
+</html>
