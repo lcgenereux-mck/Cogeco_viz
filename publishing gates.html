@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Testing & Release Workflow - Publishing Gates</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      margin: 0;
+      min-width: 320px;
+      min-height: 100vh;
+      background: #f7fafc;
+      color: #1a202c;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+    }
+
+    .workflow-container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #1a202c;
+      margin-bottom: 30px;
+      font-size: 2rem;
+    }
+
+    h2 {
+      color: #2d3748;
+      margin-bottom: 20px;
+      font-size: 1.5rem;
+    }
+
+    /* Stage-Gate Flow */
+    .stage-gate-flow {
+      max-width: 900px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    /* Gate Section */
+    .gate-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
+
+    .gate-arrow {
+      font-size: 2rem;
+      color: #667eea;
+      line-height: 1;
+      margin: 5px 0;
+    }
+
+    .gate-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px 30px;
+      border-radius: 50px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      position: relative;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+      margin: 10px 0;
+      width: 85%;
+    }
+
+    .gate-box:hover {
+      transform: scale(1.02);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .gate-label {
+      background: rgba(255, 255, 255, 0.3);
+      padding: 5px 15px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .gate-box p {
+      font-size: 0.95rem;
+      line-height: 1.5;
+      text-align: center;
+      margin: 0;
+    }
+
+    .stage-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin: 20px 0;
+      border: 3px solid #2b6cb0;
+    }
+
+    .stage-card:hover {
+      transform: scale(1.01);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .stage-header {
+      background: #2b6cb0;
+      color: white;
+      padding: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+      text-align: center;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .stage-content {
+      padding: 20px;
+    }
+
+    .stage-field {
+      margin-bottom: 20px;
+    }
+
+    .stage-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .stage-field strong {
+      display: block;
+      color: #2d3748;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stage-field p {
+      color: #4a5568;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .stage-field ul {
+      list-style-position: inside;
+      color: #4a5568;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+
+    .stage-field li {
+      margin-bottom: 10px;
+      padding-left: 5px;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .workflow-container {
+        padding: 15px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .gate-box {
+        width: 95%;
+        padding: 15px 20px;
+      }
+
+      .stage-card {
+        margin: 15px 0;
+      }
+
+      .stage-content {
+        padding: 15px;
+      }
+
+      .gate-arrow {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script>
+    const graduationCriteria = [
+      {
+        id: 1,
+        title: "PO certifies that their agent is ready to be integrated to workflow"
+      },
+      {
+        id: 2,
+        title: "Crew lead certifies that workflow is ready for integration to lower environment of customer facing platform. Tests are shown to integration platform owner (e.g., CCAIP owner) who approves integration and grants access to environment"
+      },
+      {
+        id: 3,
+        title: "Crew Lead, CAB and ARB review full test results and approve prod release to subset of population"
+      },
+      {
+        id: 4,
+        title: "Crew Lead, CAB and ARB review full test results and approve prod release to full of population"
+      }
+    ];
+
+    const stages = [
+      {
+        id: 1,
+        name: "Single agent testing",
+        description: "Test the performance of a single agent",
+        owner: "Each squad's PO",
+        environment: "Agent development in AH-DEV. Agents published to AH-PROD for testing",
+        activities: [
+          "Automated testing: each squads writes its golden prompt-response dataset, with agent-specific metrics. Metrics batch run weekly",
+          "User research testing: focus groups and unmoderated testing on single-agent (non integrated to prod platforms). Contingent on readiness testing: Squad member confirms that agent call-center and network agents are ready for user testing (URL works)",
+          "Field testing: agent (non integrated to prod platforms) is given to some internal users (field technicians), for feedback gathering"
+        ]
+      },
+      {
+        id: 2,
+        name: "Workflow level testing",
+        description: "Test the performance of an integrated workflow, connecting multiple agents",
+        owner: "Crew lead",
+        environment: "Workflow development in AH-DEV. Workflow published to AH-PROD for testing",
+        activities: [
+          "Automated testing: single representative in the crew writes an integrated golden prompt-response dataset, for the workflow. Metrics batch run weekly",
+          "User research testing: focus groups and unmoderated testing on full workflow (non integrated to prod platforms). Contingent on Readiness testing: Single member confirms that workflow is ready for user testing (URL works)",
+          "Field testing: agent (non integrated to prod platforms) is given to some internal users (call center), for feedback gathering"
+        ]
+      },
+      {
+        id: 3,
+        name: "Integration testing",
+        description: "Test the integration of an agentic workflow to its final interface",
+        owner: "Crew lead",
+        environment: "Agents as a service (AgentEngine/CloudRun, hosted in AH-PROD). Integrated to CCAIP dev/staging environment",
+        activities: [
+          "Automated testing: Continuous testing",
+          "User research testing: employees test chatbot in DialogFlow dev/staging environment. Contingent on Readiness testing: Single crew member ensures that DialogFlow URL works",
+          "Field testing: NA",
+          "Safety testing: 3rd party ensures that agent is ready to ship to clients"
+        ]
+      },
+      {
+        id: 4,
+        name: "Prod release to subset of population",
+        description: "Release the workflow to a subset of customers, in its final form",
+        owner: "Crew lead",
+        environment: "Agents as a service (AgentEngine/CloudRun, hosted in AH-PROD). Integrated to CCAIP prod environment",
+        activities: [
+          "Automated testing: Continuous testing",
+          "User research testing: interpret customer feedback (read full transcripts of up/down vote)"
+        ]
+      },
+      {
+        id: 5,
+        name: "Prod release to full population",
+        description: "Release to the full customer population",
+        owner: "Crew lead",
+        environment: "Agents as a service (AgentEngine/CloudRun, hosted in AH-PROD). Integrated to CCAIP prod environment",
+        activities: [
+          "Automated testing: Continuous testing",
+          "User research testing: interpret customer feedback (read full transcripts of up/down vote)"
+        ]
+      }
+    ];
+
+    function createStageCard(stage) {
+      return `
+        <div class="stage-card">
+          <div class="stage-header">${stage.name}</div>
+          <div class="stage-content">
+            <div class="stage-field">
+              <strong>Description</strong>
+              <p>${stage.description}</p>
+            </div>
+            <div class="stage-field">
+              <strong>Owner</strong>
+              <p>${stage.owner}</p>
+            </div>
+            <div class="stage-field">
+              <strong>Environment</strong>
+              <p>${stage.environment}</p>
+            </div>
+            <div class="stage-field">
+              <strong>Activities</strong>
+              <ul>
+                ${stage.activities.map(activity => `<li>${activity}</li>`).join('')}
+              </ul>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function createGate(criteria) {
+      return `
+        <div class="gate-section">
+          <div class="gate-arrow">↓</div>
+          <div class="gate-box">
+            <div class="gate-label">GATE ${criteria.id}</div>
+            <p>${criteria.title}</p>
+          </div>
+          <div class="gate-arrow">↓</div>
+        </div>
+      `;
+    }
+
+    function render() {
+      let html = '<div class="workflow-container"><h1>Agent Testing & Release Workflow</h1><div class="stage-gate-flow">';
+
+      stages.forEach((stage, index) => {
+        html += '<div>';
+        html += createStageCard(stage);
+        if (index < stages.length - 1) {
+          html += createGate(graduationCriteria[index]);
+        }
+        html += '</div>';
+      });
+
+      html += '</div></div>';
+
+      document.getElementById('root').innerHTML = html;
+    }
+
+    render();
+  </script>
+</body>
+</html>

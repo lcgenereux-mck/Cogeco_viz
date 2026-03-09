@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Workflow Visualization</title>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            securityLevel: 'loose',
+            themeVariables: {
+                fontSize: '14px',
+                fontFamily: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+            },
+            sequence: {
+                diagramMarginX: 10,
+                diagramMarginY: 20,
+                actorMargin: 30,
+                width: 100,
+                height: 50,
+                noteMargin: 10,
+                messageFontSize: 14,
+                noteFontSize: 14,
+                actorFontSize: 14,
+                useMaxWidth: true,
+                boxMargin: 5,
+                boxTextMargin: 3,
+            },
+        });
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f9fafb;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 1.5rem;
+        }
+
+        .mermaid-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            padding: 1rem;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+        }
+
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Troubleshooting Workflow</h1>
+        <div class="mermaid-wrapper">
+            <div class="mermaid">
+sequenceDiagram
+autonumber
+
+participant TP as Trigger Point (User)
+participant IL as Integration Layer (CCAIP)
+participant RA as Root Agent
+participant LA as Logic Agent
+participant RET as Retrieval Agent
+participant TOOL as Tool
+
+rect rgba(235,235,235,0.35)
+Note over TP,TOOL: Work package 1: Integrate ADK workflow in Self Serve (DialogFlow)
+TP->>RA: User has issue and starts self-serve chat session
+end
+
+rect rgba(235,235,235,0.35)
+Note over TP,TOOL: Work package 2: Gather user context and share back to user
+RA->>LA: Initiate troubleshooting ADK workflow and gather user context
+end
+
+rect rgba(235,235,235,0.35)
+Note over TP,TOOL: Work package 3: Retrieve answers from Knowledge base
+LA->>RET: Call Knowledge Retrieval agent
+RET->>TOOL: RAG Tool
+TOOL-->>RET: Relevant procedures
+RET-->>LA: Return guidance (troubleshooting steps) based on procedure
+end
+
+rect rgba(235,235,235,0.35)
+Note over TP,TOOL: Work package 4: Summarize session information and share to agent desktop
+TOOL->>IL: Generate Session summary and present in Agent Desktop
+end
+            </div>
+        </div>
+    </div>
+</body>
+</html>
