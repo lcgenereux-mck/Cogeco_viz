@@ -1,0 +1,2385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Agents – Path to Production Timeline</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+/* ── Toolbar ── */
+.toolbar {
+  position: sticky; top: 0; z-index: 200;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 12px;
+  height: 48px;
+}
+.toolbar h1 { font-size: 1.1em; font-weight: 700; color: #f1f5f9; flex: 1; }
+.btn {
+  background: #334155; color: #e2e8f0;
+  border: none; padding: 5px 12px; border-radius: 6px;
+  cursor: pointer; font-size: 11px; font-weight: 500;
+  transition: background 0.15s;
+}
+.btn:hover { background: #475569; }
+.btn.primary { background: #3b82f6; color: white; }
+.btn.primary:hover { background: #2563eb; }
+.btn.active { background: #16a34a; color: white; }
+
+/* ── Footer ── */
+.gantt-footer {
+  height: 60px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-top: 1px solid #1e293b;
+  font-size: 11px;
+  color: #475569;
+  letter-spacing: 0.3px;
+}
+
+/* ── Layout ── */
+.gantt-wrapper {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Left panel ── */
+.left-panel {
+  flex-shrink: 0;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid #334155;
+  background: #0f172a;
+}
+.left-header {
+  flex-shrink: 0;
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+  display: flex;
+  flex-direction: column;
+}
+.left-header-top {
+  display: flex;
+  align-items: flex-end;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  border-bottom: 1px solid #334155;
+  flex-shrink: 0;
+}
+.left-header-phases {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  flex: 1;
+  background: #1e293b;
+}
+.left-body {
+  flex: 1;
+  overflow: hidden; /* synced via JS */
+}
+.left-row {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #1a2744;
+  overflow: hidden;
+}
+.left-row.sep { background: #1a2744; border-bottom: 1px dashed #334155; }
+.cat-cell {
+  width: 38px; flex-shrink: 0;
+  font-size: 9px; font-weight: 700;
+  text-align: center;
+  border-right: 1px solid #334155;
+  height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.cat-F0  { background: transparent; border-right: 1px solid #334155; }
+.bar.f0-bar {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+  border: 1px solid #94a3b8;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-weight: 600;
+  font-size: 12px;
+}
+.cat-S2  { background: #1e3a8a; color: #bfdbfe; }
+.cat-S3  { background: #4c1d95; color: #ddd6fe; }
+.cat-S1  { background: #0c4a6e; color: #bae6fd; }
+.cat-S4  { background: #7c2d12; color: #fed7aa; }
+.cat-S0  { background: #064e3b; color: #a7f3d0; }
+.cat-NFR { background: #374151; color: #d1d5db; }
+.cat-CM  { background: #581c87; color: #e9d5ff; }
+.label-cell {
+  flex: 1;
+  padding: 0 8px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #cbd5e1;
+  cursor: default;
+  font-size: 11px;
+}
+.edit-mode .label-cell { cursor: text; }
+.label-cell:hover { color: #f1f5f9; }
+
+/* ── Right panel ── */
+.right-panel {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+}
+.right-inner { position: relative; }
+
+/* ── Header rows ── */
+.gantt-header {
+  position: sticky; top: 0; z-index: 100;
+  background: #1e293b;
+  border-bottom: 2px solid #334155;
+}
+.month-row { display: flex; border-bottom: 1px solid #334155; background: #1e293b; min-width: 100%; }
+.month-cell {
+  flex-shrink: 0; text-align: center;
+  font-size: 11px; font-weight: 600;
+  padding: 5px 2px;
+  border-right: 1px solid #334155;
+  color: #94a3b8;
+  background: #1e293b;
+}
+.week-row { display: flex; background: #172033; min-width: 100%; }
+.week-cell {
+  flex-shrink: 0; position: relative;
+  text-align: center; font-size: 10px;
+  padding: 4px 2px;
+  border-right: 1px solid #1e293b;
+  color: #64748b;
+  background: #172033;
+}
+.week-cell.today { background: #422006; color: #fde047; font-weight: 700; }
+.col-resize-handle {
+  display: none;
+  position: absolute; right: -3px; top: 0; bottom: 0; width: 6px;
+  cursor: col-resize; z-index: 20;
+  background: rgba(59,130,246,0.5);
+  border-radius: 2px;
+}
+.edit-mode .week-cell:hover .col-resize-handle { display: block; }
+
+/* ── Phase banners ── */
+.phase-container {
+  position: relative;
+  border-bottom: 1px solid #334155;
+}
+.phase-banner {
+  position: absolute;
+  border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 600;
+  color: white;
+  padding: 0 6px;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.phase-banner:hover { filter: brightness(1.15); }
+
+/* ── Gantt body ── */
+.gantt-body { position: relative; }
+.gantt-row {
+  position: relative;
+  border-bottom: 1px solid #1a2744;
+}
+.gantt-row.sep { background: #1a2744; border-bottom: 1px dashed #334155; }
+
+/* grid lines */
+.grid-line {
+  position: absolute; top: 0; bottom: 0;
+  width: 1px; background: #1e293b; pointer-events: none;
+}
+.grid-line.sub-col-line {
+  background: #172033;  /* even subtler — visible but not loud */
+  border-left: 1px dashed #1e3a5f;
+  width: 0;
+}
+.grid-line.today-line {
+  background: #fde047; width: 2px; z-index: 5;
+}
+.grid-line.divider-line {
+  width: 2px; z-index: 6; pointer-events: none;
+}
+.grid-line.milestone-line {
+  width: 2px; z-index: 4;
+}
+
+/* task bars */
+.bar {
+  position: absolute;
+  border-radius: 3px;
+  display: flex; align-items: center;
+  padding: 0 6px;
+  font-size: 10px; font-weight: 500;
+  color: white;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  cursor: pointer;
+  transition: filter 0.15s;
+  z-index: 2;
+}
+.bar:hover { filter: brightness(1.2); }
+.edit-mode .bar { cursor: text; }
+
+/* milestone label */
+.milestone-label {
+  position: absolute;
+  top: 2px; left: 3px;
+  background: #15803d;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 9px; font-weight: 700;
+  white-space: nowrap;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* sticky notes */
+.sticky-note {
+  position: absolute;
+  width: 68px;
+  background: #fde047;
+  color: #1c1917;
+  font-size: 9px; font-weight: 600;
+  padding: 6px;
+  border-radius: 2px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+  white-space: pre-wrap;
+  line-height: 1.3;
+  z-index: 3;
+  cursor: pointer;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* ── Drag-to-edit (edit mode only) ── */
+.resize-handle {
+  display: none;
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 8px; cursor: ew-resize;
+  background: rgba(255,255,255,0.35);
+  z-index: 3; border-radius: 0 3px 3px 0;
+}
+.edit-mode .bar:hover .resize-handle { display: block; }
+.edit-mode .bar { cursor: grab; user-select: none; }
+.edit-mode .bar:active { cursor: grabbing; }
+.bar.dragging {
+  opacity: 0.85; cursor: grabbing !important;
+  z-index: 20;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  outline: 2px solid rgba(255,255,255,0.5);
+}
+
+/* ── Save toast ── */
+.save-toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  background: #16a34a; color: white;
+  padding: 8px 22px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  z-index: 500; pointer-events: none;
+  opacity: 0; transition: opacity 0.25s;
+}
+.save-toast.show { opacity: 1; }
+
+/* ── Edit inline input ── */
+.inline-input {
+  background: #1e3a5f; color: white;
+  border: 1px solid #3b82f6; border-radius: 3px;
+  padding: 1px 4px; font-size: 11px;
+  outline: none; width: 100%;
+}
+
+/* ── Row drag handle ── */
+.row-drag-handle {
+  width: 14px; flex-shrink: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  cursor: grab; color: #475569;
+  font-size: 13px; user-select: none;
+}
+.row-drag-handle:hover { color: #94a3b8; }
+.row-drag-handle:active { cursor: grabbing; }
+.edit-mode .left-row:not(.sep) .row-drag-handle { display: flex; }
+.row-drop-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: #3b82f6; pointer-events: none; z-index: 50; display: none;
+}
+
+/* ── Row edit controls (insert / delete) ── */
+.row-controls {
+  display: none;
+  position: absolute;
+  right: 0; top: 50%;
+  transform: translateY(-50%);
+  gap: 2px;
+  z-index: 10;
+  padding-right: 4px;
+}
+.edit-mode .left-row:not(.sep):hover .row-controls { display: flex; }
+.row-btn {
+  width: 18px; height: 18px;
+  border: none; border-radius: 3px;
+  cursor: pointer; font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+}
+.row-btn.add-btn { background: #16a34a; color: white; }
+.row-btn.add-btn:hover { background: #15803d; }
+.row-btn.del-btn { background: #dc2626; color: white; }
+.row-btn.del-btn:hover { background: #b91c1c; }
+
+/* ── Row context dropdown ── */
+.row-menu {
+  position: fixed;
+  z-index: 500;
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  overflow: hidden;
+  min-width: 160px;
+}
+.row-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px;
+  font-size: 12px; color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.row-menu-item:hover { background: #334155; }
+.row-menu-item.danger { color: #f87171; }
+.row-menu-item.danger:hover { background: #450a0a; }
+.edit-mode .cat-cell { cursor: pointer; }
+.edit-mode .cat-cell:hover { filter: brightness(1.3); }
+.gantt-row.drop-target { background: rgba(59,130,246,0.15) !important; outline: 1px dashed #3b82f6; }
+
+/* ── Inline bar text editing ── */
+.bar-input {
+  position: absolute; inset: 0;
+  background: transparent;
+  border: none; outline: none;
+  color: inherit; font: inherit;
+  font-size: 11px; font-weight: 600;
+  padding: 0 4px;
+  width: 100%; height: 100%;
+  cursor: text;
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 1000;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 24px;
+  width: 360px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h2 { font-size: 1em; font-weight: 700; color: #f1f5f9; margin-bottom: 16px; }
+.modal-field { margin-bottom: 14px; }
+.modal-field label { display: block; font-size: 10px; font-weight: 600; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.modal-field input, .modal-field select {
+  width: 100%; background: #0f172a; color: #e2e8f0;
+  border: 1px solid #334155; border-radius: 6px;
+  padding: 7px 10px; font-size: 12px; outline: none;
+}
+.modal-field input:focus, .modal-field select:focus { border-color: #3b82f6; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+.modal select option { background: #1e293b; }
+
+/* ── View toggle ── */
+.view-toggle {
+  display: flex;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.view-toggle-btn {
+  padding: 4px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.view-toggle-btn.active {
+  background: #1e293b;
+  color: #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* ── Todo view ── */
+#todoView {
+  display: none;
+  flex: 1;
+  flex-direction: column;
+  overflow: auto;
+  padding: 24px;
+  background: #0f172a;
+  min-height: 0;
+}
+.todo-phase {
+  margin-bottom: 32px;
+}
+.todo-phase-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.todo-phase-dot {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.todo-phase-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #f1f5f9;
+  letter-spacing: 0.3px;
+}
+.todo-phase-weeks {
+  font-size: 11px;
+  color: #475569;
+}
+.todo-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+.todo-col {
+  background: #1e293b;
+  border-radius: 8px;
+  border: 1px solid #1a2744;
+  overflow: hidden;
+}
+.todo-col-header {
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid #1a2744;
+}
+.todo-col-body {
+  padding: 8px;
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.todo-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: #0f172a;
+  border: 1px solid #1a2744;
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+.todo-card-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.todo-empty {
+  font-size: 10px;
+  color: #334155;
+  padding: 4px 2px;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <h1 id="chartTitle">AI Agents – Path to Production</h1>
+  <div style="flex:1;display:flex;justify-content:center;">
+    <div class="view-toggle">
+      <button class="view-toggle-btn active" id="toggleGantt" onclick="switchView('gantt')">Gantt</button>
+      <button class="view-toggle-btn" id="toggleTodo" onclick="switchView('todo')">To-Do List</button>
+    </div>
+  </div>
+  <span id="saveStatus" style="font-size:11px;font-weight:600;transition:color 0.2s;"></span>
+  <button class="btn" onclick="showLegend()">☰ Legend</button>
+  <button class="btn" onclick="showHelp()">? Help</button>
+  <button class="btn" id="editBtn" onclick="toggleEdit()">✎ Edit Mode</button>
+  <button class="btn primary" onclick="exportJSON()">⬇ Export JSON</button>
+</div>
+
+<div class="gantt-wrapper" id="wrapper">
+  <div class="left-panel" id="leftPanel">
+    <div class="left-header" id="leftHeader">
+      <div class="left-header-top" id="leftHeaderTop">Category / Task</div>
+      <div class="left-header-phases" id="leftHeaderPhases">Phases</div>
+    </div>
+    <div class="left-body" id="leftBody"></div>
+  </div>
+  <div class="right-panel" id="rightPanel">
+    <div class="right-inner" id="rightInner">
+      <div class="gantt-header" id="ganttHeader">
+        <div class="month-row" id="monthRow"></div>
+        <div class="week-row"  id="weekRow"></div>
+        <div class="phase-container" id="phaseContainer"></div>
+        <div id="f0StickyArea" style="position:relative; overflow:hidden; border-bottom:1px solid #334155;"></div>
+      </div>
+      <div style="position:relative">
+        <div class="gantt-body" id="ganttBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="todoView"></div>
+
+<div class="gantt-footer"><span id="footerStamp">—</span>&nbsp;&nbsp;|&nbsp;&nbsp;Built by AI Team @ McKinsey &nbsp;&nbsp;//&nbsp;&nbsp; Ruth Tupe</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  CONFIGURATION  — edit this section to modify the chart
+// ═══════════════════════════════════════════════════════════════
+
+const W = 144; // pixels per week column
+
+const CONFIG = {
+  title: "AI Agents – Path to Production",
+
+  // Week index where "today" marker sits (0-based). Today = March 8 ≈ week 5 (Mar 9-13)
+  todayWeek: 5,
+
+  months: [
+    { name: "February", weeks: ["2-6","9-13","16-20","23-27"], colWidth: 72  },
+    { name: "March",    weeks: ["2-6","9-13","16-20","23-27"], colWidth: 180 },
+    { name: "April",    weeks: ["30-3","6-10","13-17","20-24"], colWidth: 180 },
+    { name: "May",      weeks: ["27-1","4-8","11-15","18-22","25-29"], colWidth: 180 },
+    { name: "June",     weeks: ["1-5"], colWidth: 180 }
+  ],
+
+  // Vertical divider lines spanning the full chart height (afterWeek = 0-based index of last week before the line)
+  dividers: [
+    { afterWeek: 7, color: "#22c55e" }  // end-of-March line
+  ],
+
+  // Legend items (acronym → definition)
+  legend: [
+    { term: "S2",  def: "Squad 2 Self Serve" },
+    { term: "S3",  def: "Squad 3 Knowledge Base" },
+    { term: "S1",  def: "Squad 1 Frontline Enablement" },
+    { term: "S4",  def: "Squad 4 Network Intelligence" },
+    { term: "S0",  def: "Squad 0 AI Factory – Platform Enabler" },
+    { term: "NFR", def: "Non-Functional Requirements for Delivery" },
+    { term: "CM",  def: "Change Management" },
+  ],
+
+  // Phase banners in the sticky header (now empty — phases moved to F0 rows below)
+  phases: [],
+
+  // Vertical milestone lines
+  milestones: [],
+
+  outcomeNotes: [],
+
+  // Task rows
+  // separator: true  → thin divider row (no bars)
+  // bars: [{ start, end, color, label }]  — week indices 0-based, inclusive
+  // Bars in the same row that overlap auto-stack (different vertical lanes)
+  rows: [
+    // ── F0 ────────────────────────────────────────────────────
+    { category:"F0", label:"",
+      bars:[
+        { start:0, end:3,  color:"#e2e8f0", label:"Standing up required infra, tools, envs" },
+        { start:4, end:4,  color:"#e2e8f0", label:"Deployment table-top exercise" },
+        { start:5, end:5,  color:"#e2e8f0", label:"Finalized deployment process" },
+        { start:6, end:7,  color:"#e2e8f0", label:"Dress rehearsal, soft release & stabilize" },
+        { start:8, end:10, color:"#e2e8f0", label:"Full release and monitor" }
+      ]
+    },
+    { separator:true },
+
+    // ── S2 ────────────────────────────────────────────────────
+    { category:"S2", label:"Supervisor (Orchestrator)",
+      bars:[{ start:0, end:7, color:"#3b82f6", label:"Agent development" }] },
+    { category:"S2", label:"Intent detection agent",
+      bars:[{ start:0, end:7, color:"#3b82f6", label:"Agent development" }] },
+    { category:"S2", label:"Self-serve troubleshooting (chatbot)",
+      bars:[{ start:0, end:7, color:"#3b82f6", label:"Agent development" }] },
+    { separator:true },
+
+    // ── S3 ────────────────────────────────────────────────────
+    { category:"S3", label:"Knowledge-retrieval agent",
+      bars:[{ start:2, end:2, color:"#7c3aed", label:"KMS Platform" },
+            { start:3, end:3, color:"#2563eb", label:"CI/CD" },
+            { start:3, end:3, color:"#ca8a04", label:"Test" },
+            { start:3, end:3, color:"#16a34a", label:"Deploy" }] },
+    { separator:true },
+
+    // ── S1 ────────────────────────────────────────────────────
+    { category:"S1", label:"Context Summary",
+      bars:[{ start:2, end:7, color:"#6b7280", label:"Google Agent Desktop" }] },
+    { category:"S1", label:"Basic troubleshooting agent (chatbot)",
+      bars:[{ start:2, end:7, color:"#6b7280", label:"Google Agent Desktop" }] },
+    { category:"S1", label:"Note agent",
+      bars:[{ start:5, end:7, color:"#7c3aed", label:"Orchestration bundle" }] },
+    { category:"S1", label:"KB retrieval",
+      bars:[{ start:6, end:7, color:"#6b7280", label:"Release manager" }] },
+    { separator:true },
+
+    // ── S4 ────────────────────────────────────────────────────
+    { category:"S4", label:"Network Intelligence", bars:[] },
+    { separator:true },
+
+    // ── S0 ────────────────────────────────────────────────────
+    { category:"S0", label:"Security",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"Moder armor, PII treatment" }] },
+    { category:"S0", label:"FinOps",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"Labeling, visibility, kill switch" }] },
+    { category:"S0", label:"Graduation process",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"CI/CD, QA" }] },
+    { category:"S0", label:"Credential propagation",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"AlloyDB" }] },
+    { category:"S0", label:"MCP proxy",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"..." }] },
+    { category:"S0", label:"Cloud run ready",
+      bars:[{ start:0, end:3, color:"#1d4ed8", label:"Underlying resources" }] },
+    { separator:true },
+
+    // ── NFR ───────────────────────────────────────────────────
+    { category:"NFR", label:"Infrastructure and monitoring",
+      bars:[{ start:4, end:4, color:"#f97316", label:"Stand up staging env" },
+            { start:5, end:5, color:"#16a34a", label:"Logging" }] },
+    { category:"NFR", label:"UAT",
+      bars:[{ start:4, end:4, color:"#f97316", label:"Prelim goldenset" },
+            { start:4, end:4, color:"#0891b2", label:"User tests" }] },
+    { category:"NFR", label:"QA",          bars:[] },
+    { category:"NFR", label:"Security",    bars:[] },
+    { category:"NFR", label:"Performance", bars:[] },
+    { category:"NFR", label:"Availability",bars:[] },
+    { category:"NFR", label:"AI Compliance",bars:[] },
+    { category:"NFR", label:"Spike/Dojo",
+      bars:[{ start:4, end:4, color:"#f97316", label:"Test Model Armor POC" }] },
+    { separator:true },
+
+    // ── CM ────────────────────────────────────────────────────
+    { category:"CM", label:"Implementation team", bars:[] },
+    { category:"CM", label:"Communication",
+      bars:[{ start:5, end:5, color:"#ec4899", label:"PSA" },
+            { start:7, end:7, color:"#ec4899", label:"ExCo" }] },
+    { category:"CM", label:"Support model",
+      bars:[{ start:4, end:4, color:"#f97316", label:"Support model definition" },
+            { start:5, end:5, color:"#16a34a", label:"Identify support team" },
+            { start:6, end:8, color:"#0891b2", label:"Monitor, Alert, & RCA" }] },
+    { category:"CM", label:"Region specific process",       bars:[] },
+    { category:"CM", label:"Paybook/SOP/Break-fix process",
+      bars:[{ start:5, end:5, color:"#16a34a", label:"Op readiness checklist" }] },
+    { category:"CM", label:"CAB",      bars:[] },
+    { category:"CM", label:"Go/No-go", bars:[] }
+  ]
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  ENGINE  — no need to edit below this line
+// ═══════════════════════════════════════════════════════════════
+
+const BAR_H    = 20;  // bar height px (regular rows)
+const F0_BAR_H = 40;  // bar height px (F0 phase row — double)
+const BAR_PAD  = 3;   // gap above first bar
+const LANE_H   = 24;  // px per lane (regular)
+const F0_LANE_H= 44;  // px per lane (F0)
+const SEP_H    = 6;
+const MIN_ROW  = 30;
+
+let editMode = false;
+
+// Flatten weeks
+function allWeeks() {
+  const out = [];
+  CONFIG.months.forEach(m => m.weeks.forEach(w => out.push({ month: m.name, label: w })));
+  return out;
+}
+const WEEKS = allWeeks();
+const NW    = WEEKS.length;
+
+// Per-week column widths derived from CONFIG.months[].colWidth
+const WEEK_WIDTHS = [];
+CONFIG.months.forEach(m => m.weeks.forEach(() => WEEK_WIDTHS.push(m.colWidth || 144)));
+
+// Cumulative left-edge x position for each week
+const WEEK_X = [];
+let TW = 0;
+function recomputeWeekX() {
+  let cx = 0;
+  for (let i = 0; i < NW; i++) { WEEK_X[i] = cx; cx += WEEK_WIDTHS[i]; }
+  TW = cx;
+}
+WEEK_WIDTHS.forEach(w => WEEK_X.push(0)); // allocate
+recomputeWeekX();
+
+// ── Bar position helpers (supports 0.5-step fractional week positions) ──
+// pixelAt(w): left-edge pixel at fractional boundary w
+//   w=0 → left of col 0; w=0.5 → midpoint of col 0; w=1 → left of col 1
+function pixelAt(w) {
+  const fl = Math.min(Math.floor(w), NW - 1);
+  return WEEK_X[fl] + (w - fl) * WEEK_WIDTHS[fl];
+}
+// Fixed snap grid: 36 px (half of the smallest 72 px Feb column).
+// Every column boundary falls on this grid (72=2×36, 180=5×36),
+// so bars in March columns can be sized to exactly 72 px, 36 px, etc.
+const SNAP_PX = 36;
+
+// barRightPx(e): pixel of a bar's right edge.
+//   Integer e  → right edge of column e  (full column included).
+//   e + frac   → partial column: WEEK_X[e] + WEEK_WIDTHS[e] * frac.
+function barRightPx(e) {
+  const fl   = Math.min(Math.floor(e), NW - 1);
+  const frac = e - fl;
+  return frac < 1e-9
+    ? WEEK_X[fl] + WEEK_WIDTHS[fl]          // integer → full column right edge
+    : WEEK_X[fl] + WEEK_WIDTHS[fl] * frac;  // fractional → partial column
+}
+function barLeft(start)       { return pixelAt(start) + 2; }
+function barWidth(start, end) { return barRightPx(end) - pixelAt(start) - 4; }
+
+// Convert a pixel to the fractional week value used for bar.start (left edge).
+function pxToStartFrac(px) {
+  px = Math.max(0, Math.min(TW - 1, px));
+  for (let w = 0; w < NW; w++) {
+    const right = WEEK_X[w] + WEEK_WIDTHS[w];
+    if (px < right || w === NW - 1) {
+      const frac = (px - WEEK_X[w]) / WEEK_WIDTHS[w];
+      return w + Math.max(0, Math.min(0.9999, frac));
+    }
+  }
+  return NW - 1;
+}
+// Convert a pixel to the fractional week value used for bar.end (right edge).
+function pxToEndFrac(px) {
+  px = Math.max(SNAP_PX, Math.min(TW, px));
+  for (let w = 0; w < NW; w++) {
+    const right = WEEK_X[w] + WEEK_WIDTHS[w];
+    if (px <= right + 0.5 || w === NW - 1) {
+      if (px >= right - 0.5) return w;                             // at column right edge → integer
+      const frac = (px - WEEK_X[w]) / WEEK_WIDTHS[w];
+      if (frac <= 0) return w > 0 ? w - 1 : 0;
+      return w + Math.min(0.9999, frac);
+    }
+  }
+  return NW - 1;
+}
+// Snap px to nearest SNAP_PX boundary, then convert to start fraction.
+function snapToStart(px) {
+  return pxToStartFrac(Math.round(px / SNAP_PX) * SNAP_PX);
+}
+// Snap px to nearest SNAP_PX boundary, then convert to end fraction.
+function snapToEnd(px) {
+  return pxToEndFrac(Math.round(px / SNAP_PX) * SNAP_PX);
+}
+
+// Auto-assign lanes to bars (uses pixel overlap for fractional support)
+function assignLanes(bars) {
+  const placed = [];
+  bars.forEach(bar => {
+    const bL = pixelAt(bar.start), bR = barRightPx(bar.end);
+    let lane = 0;
+    while (placed.some(b => b._lane === lane && bL < barRightPx(b.end) && pixelAt(b.start) < bR)) lane++;
+    bar._lane = lane;
+    placed.push(bar);
+  });
+}
+
+function rowHeight(row) {
+  if (row.separator) return SEP_H;
+  if (row.category === 'F0') {
+    const maxLane = (row.bars || []).reduce((m, b) => Math.max(m, b._lane || 0), 0);
+    return BAR_PAD + (maxLane + 1) * F0_LANE_H + 4;
+  }
+  if (!row.bars || row.bars.length === 0) return MIN_ROW;
+  const maxLane = row.bars.reduce((m, b) => Math.max(m, b._lane || 0), 0);
+  return Math.max(MIN_ROW, BAR_PAD + (maxLane + 1) * LANE_H + 4);
+}
+
+// Auto-assign phases to lanes
+function assignPhaseLanes() {
+  const placed = [];
+  CONFIG.phases.forEach(p => {
+    let lane = 0;
+    while (placed.some(q => q._lane === lane && q.start <= p.end && q.end >= p.start)) lane++;
+    p._lane = lane;
+    placed.push(p);
+  });
+}
+
+function phaseContainerHeight() {
+  if (!CONFIG.phases.length) return 0;
+  const maxLane = CONFIG.phases.reduce((m, p) => Math.max(m, p._lane || 0), 0);
+  return (maxLane + 1) * 28 + 4;
+}
+
+// ── Render ──────────────────────────────────────────────────
+
+function render() {
+  document.getElementById('chartTitle').textContent = CONFIG.title;
+
+  // Pre-process
+  CONFIG.rows.forEach(r => { if (r.bars) assignLanes(r.bars); });
+  assignPhaseLanes();
+
+  renderMonthWeekHeaders();
+  renderPhases();
+  renderF0StickyRow();
+  renderBody();
+  syncScroll();
+
+  // Sync left header height + internal section heights
+  requestAnimationFrame(() => {
+    const gh  = document.getElementById('ganttHeader');
+    const lh  = document.getElementById('leftHeader');
+    lh.style.height = gh.offsetHeight + 'px';
+
+    // Top section ("Category / Task") matches month + week + phaseContainer rows
+    const topH = document.getElementById('monthRow').offsetHeight
+               + document.getElementById('weekRow').offsetHeight
+               + document.getElementById('phaseContainer').offsetHeight;
+    document.getElementById('leftHeaderTop').style.height = topH + 'px';
+    // "Phases" section fills the rest (f0StickyArea height)
+    // flex:1 on .left-header-phases handles it automatically
+  });
+
+  // Keep Todo view in sync whenever Gantt data changes
+  if (typeof currentView !== 'undefined' && currentView === 'todo') {
+    renderTodoView();
+  }
+}
+
+function renderMonthWeekHeaders() {
+  const monthRow = document.getElementById('monthRow');
+  const weekRow  = document.getElementById('weekRow');
+  monthRow.innerHTML = '';
+  weekRow.innerHTML  = '';
+
+  // Sync left-header height
+  const lh = document.getElementById('leftHeader');
+
+  CONFIG.months.forEach(m => {
+    const el = document.createElement('div');
+    el.className   = 'month-cell';
+    el.textContent = m.name;
+    monthRow.appendChild(el); // width set after weeks loop below
+  });
+  // Set month widths by summing their week widths
+  let wi = 0;
+  CONFIG.months.forEach((m, mi) => {
+    let mw = 0;
+    m.weeks.forEach(() => { mw += WEEK_WIDTHS[wi++]; });
+    monthRow.children[mi].style.width = mw + 'px';
+  });
+
+  WEEKS.forEach((w, i) => {
+    const el = document.createElement('div');
+    el.className   = 'week-cell' + (i === CONFIG.todayWeek ? ' today' : '');
+    el.style.width = WEEK_WIDTHS[i] + 'px';
+    el.textContent = w.label;
+    // Sub-column tick marks in the header for wider columns
+    if (WEEK_WIDTHS[i] > 72) {
+      for (let sub = 72; sub < WEEK_WIDTHS[i]; sub += 72) {
+        const tick = document.createElement('div');
+        tick.style.cssText = `position:absolute; left:${sub}px; top:0; bottom:0; width:0; border-left:1px dashed #2a3a52; pointer-events:none;`;
+        el.appendChild(tick);
+      }
+    }
+    if (editMode) {
+      const rh = document.createElement('div');
+      rh.className = 'col-resize-handle';
+      rh.addEventListener('mousedown', ev => startColResize(i, ev));
+      el.appendChild(rh);
+    }
+    weekRow.appendChild(el);
+  });
+}
+
+function renderPhases() {
+  const pc = document.getElementById('phaseContainer');
+  pc.innerHTML = '';
+  const h = phaseContainerHeight();
+  pc.style.height = h + 'px';
+  pc.style.width  = TW + 'px';
+
+  CONFIG.phases.forEach((p, i) => {
+    const el = document.createElement('div');
+    el.className  = 'phase-banner';
+    el.style.left = barLeft(p.start) + 'px';
+    el.style.width= barWidth(p.start, p.end) + 'px';
+    el.style.top  = (2 + p._lane * 28) + 'px';
+    el.style.height = '24px';
+    el.style.background = p.color;
+    el.textContent = p.label;
+    el.title = p.label;
+    if (editMode) el.ondblclick = () => editPhase(i);
+    pc.appendChild(el);
+  });
+}
+
+function renderF0StickyRow() {
+  const area = document.getElementById('f0StickyArea');
+  area.innerHTML = '';
+  area.style.width = TW + 'px';
+  area.style.position = 'relative';
+
+  CONFIG.rows.forEach((row, ri) => {
+    if (row.separator || row.category !== 'F0') return;
+    const h = rowHeight(row);
+    const rr = document.createElement('div');
+    rr.style.cssText = `position:relative; height:${h}px; width:${TW}px; background:#1e293b;`;
+    rr.addEventListener('contextmenu', e => { e.preventDefault(); showAddBarMenu(ri, e); });
+
+    (row.bars || []).forEach(bar => {
+      const el = document.createElement('div');
+      el.className = 'bar f0-bar';
+      el.style.left   = barLeft(bar.start) + 'px';
+      el.style.width  = barWidth(bar.start, bar.end) + 'px';
+      el.style.top    = (BAR_PAD + (bar._lane || 0) * F0_LANE_H) + 'px';
+      el.style.height = F0_BAR_H + 'px';
+      el.textContent  = bar.label;
+      el.title        = bar.label;
+      if (editMode) {
+        makeDraggable(el, bar, ri);
+      }
+      el.addEventListener('contextmenu', ev => {
+        ev.preventDefault(); ev.stopPropagation(); showBarMenu(bar, ri, ev);
+      });
+      rr.appendChild(el);
+    });
+    area.appendChild(rr);
+  });
+
+  // Today line + dividers spanning the F0 area
+  const areaH = CONFIG.rows.filter(r => !r.separator && r.category === 'F0').reduce((s, r) => s + rowHeight(r), 0);
+  const todayX = WEEK_X[CONFIG.todayWeek] + WEEK_WIDTHS[CONFIG.todayWeek] / 2;
+  appendVLine(area, todayX, 0, areaH, '#fde047', 2, 10);
+  CONFIG.dividers.forEach(d => {
+    const x = d.afterWeek + 1 < NW ? WEEK_X[d.afterWeek + 1] : TW;
+    appendVLine(area, x, 0, areaH, d.color, 2, 10);
+  });
+}
+
+function appendVLine(parent, x, top, bottom, color, width, zIndex) {
+  const line = document.createElement('div');
+  line.style.cssText = `position:absolute; left:${x}px; top:${top}px; height:${bottom}px; width:${width}px; background:${color}; z-index:${zIndex}; pointer-events:none;`;
+  parent.appendChild(line);
+}
+
+function renderBody() {
+  const leftBody = document.getElementById('leftBody');
+  const ganttBody= document.getElementById('ganttBody');
+  leftBody.innerHTML  = '';
+  ganttBody.innerHTML = '';
+  // Wrapper for transform-based scroll sync (never clamped by scrollHeight)
+  const leftBodyInner = document.createElement('div');
+  leftBodyInner.id = 'leftBodyInner';
+  leftBodyInner.style.position = 'relative';
+  leftBody.appendChild(leftBodyInner);
+  ganttBody.style.width = TW + 'px';
+
+  // Grid lines (week boundaries + sub-column ticks every 72 px)
+  const BASE_UNIT = 72; // same width as Feb columns
+  WEEK_X.forEach((x, wi) => {
+    // Main column boundary
+    const gl = document.createElement('div');
+    gl.className = 'grid-line';
+    gl.style.left = x + 'px';
+    gl.style.bottom = '-9999px';
+    ganttBody.appendChild(gl);
+    // Sub-column dividers inside wider columns
+    if (WEEK_WIDTHS[wi] > BASE_UNIT) {
+      for (let sub = BASE_UNIT; sub < WEEK_WIDTHS[wi]; sub += BASE_UNIT) {
+        const sg = document.createElement('div');
+        sg.className = 'grid-line sub-col-line';
+        sg.style.left   = (x + sub) + 'px';
+        sg.style.bottom = '-9999px';
+        ganttBody.appendChild(sg);
+      }
+    }
+  });
+
+  // Today line (yellow)
+  const tl = document.createElement('div');
+  tl.className = 'grid-line today-line';
+  tl.style.left = (WEEK_X[CONFIG.todayWeek] + WEEK_WIDTHS[CONFIG.todayWeek] / 2) + 'px';
+  tl.style.bottom = '-9999px';
+  ganttBody.appendChild(tl);
+
+  // Divider lines (e.g. end-of-March green line)
+  CONFIG.dividers.forEach(d => {
+    const x = d.afterWeek + 1 < NW ? WEEK_X[d.afterWeek + 1] : TW;
+    const dl = document.createElement('div');
+    dl.className = 'grid-line divider-line';
+    dl.style.left = x + 'px';
+    dl.style.bottom = '-9999px';
+    dl.style.background = d.color;
+    ganttBody.appendChild(dl);
+  });
+
+  // Milestone lines (with label)
+  CONFIG.milestones.forEach(m => {
+    const ml = document.createElement('div');
+    ml.className = 'grid-line milestone-line';
+    ml.style.left = WEEK_X[m.week] + 'px';
+    ml.style.bottom = '-9999px';
+    ml.style.background = m.color;
+    const lbl = document.createElement('div');
+    lbl.className = 'milestone-label';
+    lbl.style.background = m.color;
+    lbl.textContent = m.label;
+    ml.appendChild(lbl);
+    ganttBody.appendChild(ml);
+  });
+
+  // Accumulate y offset to place sticky notes
+  let totalBodyH = 0;
+
+  CONFIG.rows.forEach((row, ri) => {
+    if (!row.separator && row.category === 'F0') return; // rendered in sticky header
+    const h = rowHeight(row);
+
+    // Left row
+    const lr = document.createElement('div');
+    lr.className = 'left-row' + (row.separator ? ' sep' : '');
+    lr.style.height = h + 'px';
+
+    // Right row
+    const rr = document.createElement('div');
+    rr.className = 'gantt-row' + (row.separator ? ' sep' : '');
+    rr.style.height = h + 'px';
+    rr.dataset.ri = ri;
+    if (!row.separator) {
+      rr.addEventListener('contextmenu', e => { e.preventDefault(); showAddBarMenu(ri, e); });
+    }
+
+    if (!row.separator) {
+      // Drag handle (edit mode only)
+      const grip = document.createElement('div');
+      grip.className = 'row-drag-handle';
+      grip.textContent = '⠿';
+      grip.title = 'Drag to reorder';
+      grip.addEventListener('mousedown', ev => { ev.stopPropagation(); startRowDrag(ri, ev); });
+      lr.appendChild(grip);
+
+      // Category badge
+      const cat = document.createElement('div');
+      cat.className = 'cat-cell cat-' + row.category;
+      cat.textContent = row.category === 'F0' ? '' : row.category;
+      if (row.catColor) { cat.style.background = row.catColor; cat.style.color = row.catColorText || '#ffffff'; }
+      if (editMode) cat.onclick = e => { e.stopPropagation(); showRowMenu(ri, e); };
+      lr.appendChild(cat);
+
+      // Label
+      const lbl = document.createElement('div');
+      lbl.className = 'label-cell';
+      lbl.textContent = row.label;
+      lbl.title = row.label;
+      if (editMode) lbl.onclick = () => editLabel(ri, lbl);
+      lr.appendChild(lbl);
+
+      // Bars
+      if (row.bars) {
+        row.bars.forEach((bar, bi) => {
+          const el = document.createElement('div');
+          el.className = 'bar';
+          el.style.left   = barLeft(bar.start) + 'px';
+          el.style.width  = barWidth(bar.start, bar.end) + 'px';
+          el.style.top    = (BAR_PAD + (bar._lane || 0) * LANE_H) + 'px';
+          el.style.height = BAR_H + 'px';
+          el.style.background = bar.color;
+          if (row.category === 'F0') el.classList.add('f0-bar');
+          el.textContent = bar.label;
+          el.title = bar.label;
+          if (editMode) {
+            makeDraggable(el, bar, ri);
+          }
+          el.addEventListener('contextmenu', ev => {
+            ev.preventDefault(); ev.stopPropagation(); showBarMenu(bar, ri, ev);
+          });
+          rr.appendChild(el);
+        });
+      }
+    }
+
+    leftBodyInner.appendChild(lr);
+    ganttBody.appendChild(rr);
+    totalBodyH += h;
+  });
+
+  ganttBody.style.minHeight = totalBodyH + 'px';
+}
+
+// ── Scroll sync ──────────────────────────────────────────────
+
+let _scrollSyncDone = false;
+function syncScroll() {
+  if (_scrollSyncDone) return;
+  _scrollSyncDone = true;
+  const rp = document.getElementById('rightPanel');
+  // Use CSS translateY on leftBodyInner — never clamped by scrollHeight mismatches
+  rp.addEventListener('scroll', () => {
+    const inner = document.getElementById('leftBodyInner');
+    if (inner) inner.style.transform = `translateY(-${rp.scrollTop}px)`;
+  }, { passive: true });
+}
+
+// ── Edit helpers ─────────────────────────────────────────────
+
+function editLabel(ri, el) {
+  const row = CONFIG.rows[ri];
+  const inp = document.createElement('input');
+  inp.className = 'inline-input';
+  inp.value = row.label;
+  el.textContent = '';
+  el.appendChild(inp);
+  inp.focus(); inp.select();
+  showSaving();
+  const save = () => { row.label = inp.value; render(); saveToStorage(); };
+  inp.onblur = save;
+  inp.onkeydown = e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') render(); };
+}
+
+function editBar(ri, bi) {
+  const bar = CONFIG.rows[ri].bars[bi];
+  const newLabel = prompt('Bar label:', bar.label);
+  if (newLabel !== null) { bar.label = newLabel; render(); }
+}
+
+function editPhase(pi) {
+  const p = CONFIG.phases[pi];
+  const newLabel = prompt('Phase label:', p.label);
+  if (newLabel !== null) { p.label = newLabel; render(); }
+}
+
+// ── Row menu (add / delete) ───────────────────────────────────
+
+let _rowMenu = null;
+
+function closeRowMenu() {
+  if (_rowMenu) { _rowMenu.remove(); _rowMenu = null; }
+}
+
+function showRowMenu(ri, e) {
+  closeRowMenu();
+  const menu = document.createElement('div');
+  menu.className = 'row-menu';
+  _rowMenu = menu;
+
+  const row = CONFIG.rows[ri];
+  const items = [
+    { label: '+ Add row above',  action: () => addRow(ri, 'above') },
+    { label: '+ Add row below',  action: () => addRow(ri, 'below') },
+    { label: '🎨 Change color',  action: () => showRowColorPopup(row) },
+    { label: '✕ Delete row',     action: () => deleteRow(ri), cls: 'danger' },
+  ];
+
+  items.forEach(({ label, action, cls }) => {
+    const item = document.createElement('div');
+    item.className = 'row-menu-item' + (cls ? ' ' + cls : '');
+    item.textContent = label;
+    item.onmousedown = e2 => { e2.preventDefault(); closeRowMenu(); action(); };
+    menu.appendChild(item);
+  });
+
+  // Position near click
+  menu.style.left = e.clientX + 'px';
+  menu.style.top  = e.clientY + 'px';
+  document.body.appendChild(menu);
+
+  // Close on next outside click
+  setTimeout(() => document.addEventListener('mousedown', closeRowMenu, { once: true }), 0);
+}
+
+function showRowColorPopup(row) {
+  showAdvancedColorPicker(row.catColor || '', hex => {
+    row.catColor = hex; render(); saveToStorage();
+  }, {
+    title: 'Change badge color',
+    onReset: () => { delete row.catColor; delete row.catColorText; render(); saveToStorage(); }
+  });
+}
+
+function showAddBarMenu(ri, e) {
+  closeRowMenu();
+  const menu = document.createElement('div');
+  menu.className = 'row-menu';
+  _rowMenu = menu;
+
+  const rp = document.getElementById('rightPanel');
+  const ganttX = e.clientX - rp.getBoundingClientRect().left + rp.scrollLeft;
+  const week = Math.max(0, Math.min(NW - 1, pixelToWeek(ganttX)));
+
+  // Find nearest bar to click position using 2D distance (accounts for stacked lanes)
+  const rowBars = CONFIG.rows[ri].bars || [];
+  const rowRect = e.currentTarget.getBoundingClientRect();
+  const clickY  = e.clientY - rowRect.top;
+  const laneH   = CONFIG.rows[ri].category === 'F0' ? F0_LANE_H : LANE_H;
+  const barH    = CONFIG.rows[ri].category === 'F0' ? F0_BAR_H  : BAR_H;
+  let nearestBar = null;
+  let nearestDist = Infinity;
+  rowBars.forEach(b => {
+    const bLeft  = pixelAt(b.start);
+    const bRight = barRightPx(b.end);
+    const bTop   = BAR_PAD + (b._lane || 0) * laneH;
+    const bBot   = bTop + barH;
+    const xDist  = ganttX < bLeft ? bLeft - ganttX : ganttX > bRight ? ganttX - bRight : 0;
+    const yDist  = clickY  < bTop  ? bTop  - clickY  : clickY  > bBot   ? clickY  - bBot   : 0;
+    const dist   = Math.sqrt(xDist * xDist + yDist * yDist);
+    if (dist < nearestDist) { nearestDist = dist; nearestBar = b; }
+  });
+
+  const addItem = document.createElement('div');
+  addItem.className = 'row-menu-item';
+  addItem.textContent = '＋ Add box';
+  addItem.onmousedown = ev => {
+    ev.preventDefault();
+    closeRowMenu();
+    if (!CONFIG.rows[ri].bars) CONFIG.rows[ri].bars = [];
+    const startPx = pixelAt(week);
+    const endVal  = snapToEnd(startPx + 72);
+    CONFIG.rows[ri].bars.push({ start: week, end: endVal, color: '#3b82f6', label: 'Test' });
+    assignLanes(CONFIG.rows[ri].bars);
+    saveToStorage();
+    render();
+  };
+  menu.appendChild(addItem);
+
+  if (nearestBar) {
+    const dupItem = document.createElement('div');
+    dupItem.className = 'row-menu-item';
+    dupItem.textContent = '⧉ Duplicate box';
+    dupItem.onmousedown = ev => {
+      ev.preventDefault();
+      closeRowMenu();
+      const duration = nearestBar.end - nearestBar.start;
+      const newBar = { start: nearestBar.end, end: Math.min(NW - 1, nearestBar.end + duration), color: nearestBar.color, label: nearestBar.label };
+      CONFIG.rows[ri].bars.push(newBar);
+      assignLanes(CONFIG.rows[ri].bars);
+      saveToStorage(); render();
+    };
+    menu.appendChild(dupItem);
+
+    const delItem = document.createElement('div');
+    delItem.className = 'row-menu-item danger';
+    delItem.textContent = '✕ Delete box';
+    delItem.onmousedown = ev => {
+      ev.preventDefault();
+      closeRowMenu();
+      const idx = CONFIG.rows[ri].bars.indexOf(nearestBar);
+      if (idx !== -1) CONFIG.rows[ri].bars.splice(idx, 1);
+      saveToStorage(); render();
+    };
+    menu.appendChild(delItem);
+
+    const colorItem = document.createElement('div');
+    colorItem.className = 'row-menu-item';
+    colorItem.textContent = '🎨 Change color';
+    colorItem.onmousedown = ev => {
+      ev.preventDefault();
+      closeRowMenu();
+      showColorPopup(nearestBar);
+    };
+    menu.appendChild(colorItem);
+  }
+
+  menu.style.left = e.clientX + 'px';
+  menu.style.top  = e.clientY + 'px';
+  document.body.appendChild(menu);
+  setTimeout(() => document.addEventListener('mousedown', closeRowMenu, { once: true }), 0);
+}
+
+// ── Bar right-click menu ──────────────────────────────────────
+
+function showBarMenu(bar, ri, e) {
+  closeRowMenu();
+  const menu = document.createElement('div');
+  menu.className = 'row-menu';
+  _rowMenu = menu;
+
+  const items = [
+    {
+      label: '＋ Add box',
+      action: () => {
+        const rp = document.getElementById('rightPanel');
+        const ganttX = e.clientX - rp.getBoundingClientRect().left + rp.scrollLeft;
+        const week = Math.max(0, Math.min(NW - 1, pixelToWeek(ganttX)));
+        if (!CONFIG.rows[ri].bars) CONFIG.rows[ri].bars = [];
+        CONFIG.rows[ri].bars.push({ start: week, end: snapToEnd(pixelAt(week) + 72), color: '#3b82f6', label: 'Test' });
+        assignLanes(CONFIG.rows[ri].bars);
+        saveToStorage(); render();
+      }
+    },
+    {
+      label: '⧉ Duplicate box',
+      action: () => {
+        const duration = bar.end - bar.start;
+        const newBar = { start: bar.end, end: snapToEnd(barRightPx(bar.end) + (barRightPx(bar.end) - pixelAt(bar.start))), color: bar.color, label: bar.label };
+        newBar.end = Math.min(NW - 1, bar.end + duration);
+        if (!CONFIG.rows[ri].bars) CONFIG.rows[ri].bars = [];
+        CONFIG.rows[ri].bars.push(newBar);
+        assignLanes(CONFIG.rows[ri].bars);
+        saveToStorage(); render();
+      }
+    },
+    {
+      label: '✕ Delete box',
+      cls: 'danger',
+      action: () => {
+        const bars = CONFIG.rows[ri].bars;
+        const idx = bars.indexOf(bar);
+        if (idx !== -1) bars.splice(idx, 1);
+        saveToStorage(); render();
+      }
+    },
+    {
+      label: '🎨 Change color',
+      action: () => showColorPopup(bar)
+    },
+  ];
+
+  items.forEach(({ label, action, cls }) => {
+    const item = document.createElement('div');
+    item.className = 'row-menu-item' + (cls ? ' ' + cls : '');
+    item.textContent = label;
+    item.onmousedown = ev => { ev.preventDefault(); closeRowMenu(); action(); };
+    menu.appendChild(item);
+  });
+
+  menu.style.left = e.clientX + 'px';
+  menu.style.top  = e.clientY + 'px';
+  document.body.appendChild(menu);
+  requestAnimationFrame(() => {
+    const r = menu.getBoundingClientRect();
+    if (r.right  > window.innerWidth)  menu.style.left = (e.clientX - r.width)  + 'px';
+    if (r.bottom > window.innerHeight) menu.style.top  = (e.clientY - r.height) + 'px';
+  });
+  setTimeout(() => document.addEventListener('mousedown', closeRowMenu, { once: true }), 0);
+}
+
+// ── Color picker overlay ──────────────────────────────────────
+
+// ── Color palettes (parsed from design system) ───────────────
+const COLOR_PALETTES = [
+  { name:'Sky',      shades:['#E9F8FC','#CAE8F7','#68CBF8','#52B4F5','#59C3F7','#1A8FD4','#1F6DB8','#1870AC','#1B435D','#1A364D'] },
+  { name:'Blue',     shades:['#E9F0FE','#D4E2FD','#7DA7F8','#5288F5','#276CF4','#1F56C3','#184CA8','#174192','#1A3070','#112954'] },
+  { name:'Violet',   shades:['#EFEFFD','#E2D9FA','#A588FF','#8775CF','#8933FF','#6D2EE8','#5429CC','#4A2463','#331F72','#2D1C59'] },
+  { name:'Purple',   shades:['#FEE8FF','#EAD2FF','#BD7FFF','#A055FF','#A033FF','#8029CC','#601F99','#451E6B','#331B4C','#231B3C'] },
+  { name:'Electric', shades:['#EAE5FC','#D9DEF9','#A09BF8','#7083F8','#3842F5','#2E30C8','#2430D4','#253195','#1D2068','#1C1D52'] },
+  { name:'Cyan',     shades:['#E1F8F5','#C4F2EC','#68ECDB','#45E7D2','#19E2C8','#0BDDB7','#08C4A2','#11A0B0','#134E4D','#163930'] },
+  { name:'Green',    shades:['#E6F8EF','#C5EADB','#66C8A1','#33B581','#0CA88A','#009358','#007245','#00623B','#0C4432','#103528'] },
+  { name:'Toxic',    shades:['#F0F9EE','#E1F1DD','#87E271','#54D634','#43A82A','#388921','#2DBE1B','#225815','#254820','#203420'] },
+  { name:'Emerald',  shades:['#E6F5EA','#D5EDD9','#71D888','#48C86A','#34C759','#269A43','#1F7735','#1F7225','#1D6828','#1C3629'] },
+  { name:'Red',      shades:['#FDECEB','#F8D4D1','#F17882','#EF6256','#E8382F','#C4352A','#BC3F26','#A52921','#802122','#431C21'] },
+  { name:'Orange',   shades:['#FFF2E0','#FFE18D','#FFB84D','#FFAD33','#FF8800','#F59900','#CC7A00','#836800','#664113','#462E18'] },
+  { name:'Pink',     shades:['#FCE9F6','#F9D1EC','#E95FBC','#E649B2','#E01B9F','#B3167F','#9D136F','#86105F','#5C1649','#43153A'] },
+];
+const SHADE_LABELS = ['95','90','80','70','60','50','40','30','20','10'];
+
+function showAdvancedColorPicker(currentColor, onApply, opts = {}) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1e293b;border:1px solid #475569;border-radius:12px;padding:20px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+
+  // Title
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:14px;';
+  title.textContent = opts.title || 'Change color';
+  box.appendChild(title);
+
+  // Palette family grid
+  const familyGrid = document.createElement('div');
+  familyGrid.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:12px;';
+
+  // Shade strip
+  const shadeStrip = document.createElement('div');
+  shadeStrip.style.cssText = 'display:grid;grid-template-columns:repeat(10,1fr);gap:3px;margin-bottom:14px;min-height:36px;';
+
+  let selectedFamily = null;
+  let selectedHex = currentColor || '#3b82f6';
+
+  // Preview + hex input row
+  const previewRow = document.createElement('div');
+  previewRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+  const preview = document.createElement('div');
+  preview.style.cssText = `width:32px;height:32px;border-radius:6px;border:1px solid #475569;background:${selectedHex};flex-shrink:0;`;
+  const hexInp = document.createElement('input');
+  hexInp.maxLength = 7;
+  hexInp.value = selectedHex;
+  hexInp.style.cssText = 'flex:1;background:#0f172a;border:1px solid #475569;color:#e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;font-family:monospace;outline:none;';
+  previewRow.append(preview, hexInp);
+
+  const errMsg = document.createElement('div');
+  errMsg.style.cssText = 'font-size:11px;color:#f87171;min-height:14px;margin-bottom:10px;';
+
+  // Buttons
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;';
+  if (opts.onReset) {
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Reset';
+    resetBtn.style.cssText = 'background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;margin-right:auto;';
+    resetBtn.onclick = () => { overlay.remove(); opts.onReset(); };
+    btnRow.appendChild(resetBtn);
+  }
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:7px 14px;font-size:12px;cursor:pointer;';
+  cancelBtn.onclick = () => overlay.remove();
+  const applyBtn = document.createElement('button');
+  applyBtn.textContent = 'Apply';
+  applyBtn.style.cssText = 'background:#3b82f6;color:white;border:none;border-radius:6px;padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;';
+  btnRow.append(cancelBtn, applyBtn);
+
+  box.append(familyGrid, shadeStrip, previewRow, errMsg, btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+
+  function selectColor(hex) {
+    selectedHex = hex;
+    preview.style.background = hex;
+    hexInp.value = hex;
+    errMsg.textContent = '';
+  }
+
+  function renderShades(palette) {
+    shadeStrip.innerHTML = '';
+    palette.shades.forEach((hex, i) => {
+      const s = document.createElement('div');
+      s.title = SHADE_LABELS[i];
+      s.style.cssText = `height:36px;border-radius:4px;background:${hex};cursor:pointer;position:relative;border:2px solid transparent;transition:border-color 0.1s;`;
+      s.addEventListener('mouseenter', () => { if (selectedHex !== hex) s.style.borderColor = '#94a3b8'; });
+      s.addEventListener('mouseleave', () => { if (selectedHex !== hex) s.style.borderColor = 'transparent'; });
+      s.addEventListener('click', () => {
+        shadeStrip.querySelectorAll('div').forEach(d => d.style.borderColor = 'transparent');
+        s.style.borderColor = '#f1f5f9';
+        selectColor(hex);
+      });
+      // Mark currently selected
+      if (hex.toLowerCase() === selectedHex.toLowerCase()) s.style.borderColor = '#f1f5f9';
+
+      // Label on hover via title — also add tiny text at bottom
+      const lbl = document.createElement('div');
+      lbl.textContent = SHADE_LABELS[i];
+      lbl.style.cssText = 'position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:8px;color:rgba(255,255,255,0.6);pointer-events:none;font-weight:600;';
+      s.appendChild(lbl);
+      shadeStrip.appendChild(s);
+    });
+  }
+
+  // Build family buttons
+  COLOR_PALETTES.forEach(palette => {
+    const base = palette.shades[4]; // shade-60 as representative
+    const btn = document.createElement('div');
+    btn.title = palette.name;
+    btn.style.cssText = `height:28px;border-radius:5px;background:${base};cursor:pointer;border:2px solid transparent;transition:border-color 0.1s;display:flex;align-items:flex-end;padding:2px 3px;`;
+    const lbl = document.createElement('div');
+    lbl.textContent = palette.name;
+    lbl.style.cssText = 'font-size:7px;font-weight:700;color:rgba(255,255,255,0.85);text-shadow:0 1px 2px rgba(0,0,0,0.6);line-height:1;pointer-events:none;';
+    btn.appendChild(lbl);
+    btn.addEventListener('click', () => {
+      familyGrid.querySelectorAll('div').forEach(b => b.style.borderColor = 'transparent');
+      btn.style.borderColor = '#f1f5f9';
+      selectedFamily = palette;
+      renderShades(palette);
+    });
+    // Pre-select family if current color matches one of its shades
+    if (palette.shades.some(h => h.toLowerCase() === (currentColor || '').toLowerCase())) {
+      btn.style.borderColor = '#f1f5f9';
+      selectedFamily = palette;
+    }
+    familyGrid.appendChild(btn);
+  });
+
+  // Render shades for pre-selected family or first
+  if (selectedFamily) renderShades(selectedFamily);
+  else renderShades(COLOR_PALETTES[0]);
+
+  // Hex input wiring
+  hexInp.oninput = () => {
+    errMsg.textContent = '';
+    const v = hexInp.value.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) { preview.style.background = v; selectedHex = v; }
+  };
+
+  const apply = () => {
+    const hex = hexInp.value.trim();
+    if (/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/.test(hex)) {
+      overlay.remove(); onApply(hex);
+    } else {
+      errMsg.textContent = 'Enter a valid hex, e.g. #3b82f6';
+      hexInp.style.borderColor = '#dc2626';
+    }
+  };
+  applyBtn.onclick = apply;
+  hexInp.onkeydown = ev => {
+    if (ev.key === 'Enter')  apply();
+    if (ev.key === 'Escape') overlay.remove();
+    ev.stopPropagation();
+  };
+  overlay.addEventListener('mousedown', ev => { if (ev.target === overlay) overlay.remove(); });
+  hexInp.focus(); hexInp.select();
+}
+
+function showColorPopup(bar) {
+  showAdvancedColorPicker(bar.color, hex => {
+    bar.color = hex; render(); saveToStorage();
+  });
+}
+
+function startRowDrag(dragRi, e) {
+  e.preventDefault();
+  const srcCat = CONFIG.rows[dragRi].category;
+
+  // Collect indices of rows in the same category (for valid drop zones)
+  const catIndices = CONFIG.rows.reduce((a, r, i) => {
+    if (!r.separator && r.category === srcCat) a.push(i); return a;
+  }, []);
+
+  // Pre-compute y positions of every non-F0 row (matches leftBodyInner children order)
+  const rowTops = {}; // ri → top px within leftBodyInner
+  let cy = 0;
+  CONFIG.rows.forEach((row, ri) => {
+    if (row.separator || row.category !== 'F0') {
+      rowTops[ri] = cy;
+      cy += rowHeight(row);
+    }
+  });
+
+  // Drop indicator
+  const leftBodyInner = document.getElementById('leftBodyInner');
+  const indicator = document.createElement('div');
+  indicator.className = 'row-drop-line';
+  leftBodyInner.appendChild(indicator);
+
+  let targetInsertRi = null; // insert BEFORE this index (or after last if === catIndices.last+1)
+
+  function onMove(ev) {
+    const rect = leftBodyInner.getBoundingClientRect();
+    const scrollTop = document.getElementById('rightPanel').scrollTop;
+    const cursorY = ev.clientY - rect.top + scrollTop;
+
+    // Find nearest boundary between same-category rows
+    // Boundaries: top of first, between each pair, bottom of last
+    const boundaries = catIndices.map(ri => ({ y: rowTops[ri], insertRi: ri }));
+    const lastRi = catIndices[catIndices.length - 1];
+    boundaries.push({ y: rowTops[lastRi] + rowHeight(CONFIG.rows[lastRi]), insertRi: lastRi + 1 });
+
+    let best = null, bestDist = Infinity;
+    boundaries.forEach(b => {
+      const d = Math.abs(cursorY - b.y);
+      if (d < bestDist) { bestDist = d; best = b; }
+    });
+
+    // Suppress no-op positions (same spot as current)
+    if (best && best.insertRi !== dragRi && best.insertRi !== dragRi + 1) {
+      indicator.style.display = 'block';
+      indicator.style.top = best.y + 'px';
+      targetInsertRi = best.insertRi;
+    } else {
+      indicator.style.display = 'none';
+      targetInsertRi = null;
+    }
+  }
+
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    indicator.remove();
+
+    if (targetInsertRi !== null) {
+      const row = CONFIG.rows.splice(dragRi, 1)[0];
+      const insertAt = targetInsertRi > dragRi ? targetInsertRi - 1 : targetInsertRi;
+      CONFIG.rows.splice(insertAt, 0, row);
+      saveToStorage();
+      render();
+    }
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function addRow(ri, where) {
+  const ref = CONFIG.rows[ri];
+  const newRow = {
+    category: ref.category || 'S2',
+    label: 'New task',
+    bars: []
+  };
+  const insertAt = where === 'above' ? ri : ri + 1;
+  CONFIG.rows.splice(insertAt, 0, newRow);
+  saveToStorage();
+  render();
+}
+
+function deleteRow(ri) {
+  if (!confirm('Delete this row?')) return;
+  CONFIG.rows.splice(ri, 1);
+  saveToStorage();
+  render();
+}
+
+// ── Controls ─────────────────────────────────────────────────
+
+function toggleEdit() {
+  editMode = !editMode;
+  const btn = document.getElementById('editBtn');
+  btn.textContent = editMode ? '✎ Edit: ON' : '✎ Edit Mode';
+  btn.className   = 'btn' + (editMode ? ' active' : '');
+  document.getElementById('wrapper').classList.toggle('edit-mode', editMode);
+  render();
+}
+
+function exportJSON() {
+  // Strip internal _lane props before export
+  const clean = JSON.parse(JSON.stringify(CONFIG));
+  clean.rows.forEach(r => { if (r.bars) r.bars.forEach(b => delete b._lane); });
+  clean.phases.forEach(p => delete p._lane);
+  const blob = new Blob([JSON.stringify(clean, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'gantt-config.json';
+  a.click();
+}
+
+function showLegend() {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1e293b;border:1px solid #475569;border-radius:12px;padding:24px;width:420px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:14px;font-weight:700;color:#f1f5f9;margin-bottom:16px;';
+  title.textContent = 'Legend';
+  box.appendChild(title);
+
+  // Scrollable list
+  const list = document.createElement('div');
+  list.style.cssText = 'flex:1;overflow-y:auto;margin-bottom:16px;';
+  box.appendChild(list);
+
+  function renderList() {
+    list.innerHTML = '';
+    CONFIG.legend.forEach((item, idx) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #334155;';
+
+      const termEl = document.createElement('span');
+      termEl.style.cssText = 'font-size:12px;font-weight:700;color:#93c5fd;font-family:monospace;min-width:48px;';
+      termEl.textContent = item.term;
+
+      const sep = document.createElement('span');
+      sep.style.cssText = 'color:#475569;font-size:12px;';
+      sep.textContent = '–';
+
+      const defEl = document.createElement('span');
+      defEl.style.cssText = 'font-size:12px;color:#cbd5e1;flex:1;';
+      defEl.textContent = item.def;
+
+      const del = document.createElement('button');
+      del.style.cssText = 'background:none;border:none;color:#64748b;cursor:pointer;font-size:14px;padding:0 4px;line-height:1;';
+      del.textContent = '✕';
+      del.title = 'Remove';
+      del.onclick = () => { CONFIG.legend.splice(idx, 1); saveToStorage(); renderList(); };
+
+      row.append(termEl, sep, defEl, del);
+      list.appendChild(row);
+    });
+  }
+  renderList();
+
+  // Add new item row
+  const addRow = document.createElement('div');
+  addRow.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:16px;';
+
+  const termInp = document.createElement('input');
+  termInp.placeholder = 'Term';
+  termInp.style.cssText = 'width:72px;background:#0f172a;border:1px solid #475569;color:#e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;font-family:monospace;outline:none;';
+
+  const defInp = document.createElement('input');
+  defInp.placeholder = 'Definition';
+  defInp.style.cssText = 'flex:1;background:#0f172a;border:1px solid #475569;color:#e2e8f0;border-radius:6px;padding:6px 8px;font-size:12px;outline:none;';
+
+  const addBtn = document.createElement('button');
+  addBtn.textContent = '＋ Add';
+  addBtn.style.cssText = 'background:#3b82f6;color:white;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;';
+  addBtn.onclick = () => {
+    const t = termInp.value.trim();
+    const d = defInp.value.trim();
+    if (!t || !d) return;
+    CONFIG.legend.push({ term: t, def: d });
+    saveToStorage();
+    termInp.value = ''; defInp.value = '';
+    renderList();
+  };
+
+  addRow.append(termInp, defInp, addBtn);
+  box.appendChild(addRow);
+
+  // Close button
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = 'align-self:flex-end;background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:7px 20px;font-size:12px;cursor:pointer;';
+  closeBtn.onclick = () => overlay.remove();
+  box.appendChild(closeBtn);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', ev => { if (ev.target === overlay) overlay.remove(); });
+  [termInp, defInp].forEach(inp => inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') addBtn.click();
+    if (ev.key === 'Escape') overlay.remove();
+    ev.stopPropagation();
+  }));
+}
+
+function showHelp() {
+  alert(
+    "HOW TO EDIT THIS CHART\n" +
+    "──────────────────────\n\n" +
+    "Option A — Edit the source file directly:\n" +
+    "  Open this .html file in a text editor.\n" +
+    "  Find the CONFIG object at the top of <script>.\n" +
+    "  Edit rows, bars, phases, etc. and save.\n" +
+    "  Refresh the page to see your changes.\n\n" +
+    "Option B — Edit Mode (in browser):\n" +
+    "  Click '✎ Edit Mode' to enable.\n" +
+    "  Double-click any label or bar to rename it.\n" +
+    "  Click '⬇ Export JSON' to save your data.\n\n" +
+    "BAR SYNTAX:\n" +
+    "  { start: 4, end: 7, color: '#3b82f6', label: 'My task' }\n" +
+    "  Weeks are 0-based: 0=Feb2, 4=Mar2, 8=Mar30, 12=Apr27\n\n" +
+    "ADDING A ROW:\n" +
+    "  Copy an existing row object in CONFIG.rows and edit it.\n\n" +
+    "SEPARATOR ROWS:\n" +
+    "  { separator: true }  — thin visual divider"
+  );
+}
+
+// ── Drag-to-edit ─────────────────────────────────────────────
+
+// Convert browser clientX → gantt x-coordinate (accounts for horizontal scroll)
+function clientXToGanttPx(clientX) {
+  const rp = document.getElementById('rightPanel');
+  return clientX - rp.getBoundingClientRect().left + rp.scrollLeft;
+}
+
+// Map a gantt x-coordinate to the week index it falls within
+// Legacy alias used in showAddBarMenu (integer snap, for "add bar here")
+function pixelToWeek(px) {
+  if (px <= 0) return 0;
+  for (let i = 0; i < NW - 1; i++) {
+    if (px < WEEK_X[i + 1]) return i;
+  }
+  return NW - 1;
+}
+
+function makeDraggable(el, bar, ri) {
+  const handle = document.createElement('div');
+  handle.className = 'resize-handle';
+  el.appendChild(handle);
+
+  function startDrag(mode, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    showSaving();
+
+    const origRowBars    = CONFIG.rows[ri].bars;
+    const startClientX   = e.clientX;
+    const startClientY   = e.clientY;
+    const origStart      = bar.start;
+    const origEnd        = bar.end;
+    const origEndRightPx = barRightPx(origEnd);
+    let hasMoved         = false;
+    let currentTargetRi  = ri;
+
+    // For move: lift bar to fixed so it can cross rows
+    let dragOffsetX = 0, dragOffsetY = 0;
+    if (mode === 'move') {
+      const rect = el.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+      el.style.position    = 'fixed';
+      el.style.left        = rect.left + 'px';
+      el.style.top         = rect.top  + 'px';
+      el.style.width       = rect.width + 'px';
+      el.style.zIndex      = '300';
+      el.style.pointerEvents = 'none';
+    }
+    el.classList.add('dragging');
+
+    function ganttXFromClient(clientX) {
+      const rp = document.getElementById('rightPanel');
+      return clientX - rp.getBoundingClientRect().left + rp.scrollLeft;
+    }
+
+    function onMove(e) {
+      const dx = e.clientX - startClientX;
+      const dy = e.clientY - startClientY;
+      if (!hasMoved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      hasMoved = true;
+
+      if (mode === 'move') {
+        // Move bar element freely with cursor
+        el.style.left = (e.clientX - dragOffsetX) + 'px';
+        el.style.top  = (e.clientY - dragOffsetY) + 'px';
+
+        // Compute snap position from bar's left edge in gantt coords
+        const ganttX   = ganttXFromClient(e.clientX - dragOffsetX);
+        const newStart = Math.max(0, snapToStart(ganttX));
+        const duration = origEnd - origStart;
+        const newEnd   = Math.min(NW - 1, newStart + duration);
+        if (Math.abs((newEnd - newStart) - duration) < 0.01) { bar.start = newStart; bar.end = newEnd; }
+
+        // Highlight target row (pointer-events:none on el, so elementFromPoint sees the row)
+        // F0/Phase bars don't cross rows — skip drop-target highlighting
+        if (CONFIG.rows[ri].category !== 'F0') {
+          document.querySelectorAll('.gantt-row.drop-target').forEach(r => r.classList.remove('drop-target'));
+          const under = document.elementFromPoint(e.clientX, e.clientY);
+          const targetRow = under && under.closest('.gantt-row:not(.sep)');
+          if (targetRow) {
+            targetRow.classList.add('drop-target');
+            currentTargetRi = parseInt(targetRow.dataset.ri);
+          }
+        }
+      } else {
+        // Resize: update right edge only
+        const newEnd = Math.min(NW - 1, snapToEnd(origEndRightPx + dx));
+        if (barRightPx(newEnd) - pixelAt(bar.start) >= SNAP_PX) bar.end = newEnd;
+        el.style.width = barWidth(bar.start, bar.end) + 'px';
+      }
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      document.querySelectorAll('.gantt-row.drop-target').forEach(r => r.classList.remove('drop-target'));
+      el.classList.remove('dragging');
+
+      if (!hasMoved && mode === 'move') {
+        // Restore inline position before opening text editor
+        el.style.position = el.style.zIndex = el.style.pointerEvents = '';
+        el.style.left = barLeft(bar.start) + 'px';
+        const laneH = el.classList.contains('f0-bar') ? F0_LANE_H : LANE_H;
+        el.style.top  = (BAR_PAD + (bar._lane || 0) * laneH) + 'px';
+        startInlineBarEdit(el, bar);
+        return;
+      }
+
+      if (mode === 'move') {
+        el.style.position = el.style.zIndex = el.style.pointerEvents = '';
+        if (hasMoved && currentTargetRi !== ri && !CONFIG.rows[currentTargetRi]?.separator
+            && CONFIG.rows[ri].category !== 'F0') {
+          // Cross-row: move bar from source to target (F0/Phase bars never cross rows)
+          const idx = origRowBars.indexOf(bar);
+          if (idx !== -1) origRowBars.splice(idx, 1);
+          CONFIG.rows[currentTargetRi].bars = CONFIG.rows[currentTargetRi].bars || [];
+          CONFIG.rows[currentTargetRi].bars.push(bar);
+          assignLanes(origRowBars);
+          assignLanes(CONFIG.rows[currentTargetRi].bars);
+        } else {
+          assignLanes(origRowBars);
+        }
+      } else {
+        assignLanes(origRowBars);
+      }
+
+      if (hasMoved) { render(); saveToStorage(); }
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  }
+
+  handle.addEventListener('mousedown', e => startDrag('resize', e));
+  el.addEventListener('mousedown', e => {
+    if (e.target === handle) return;
+    startDrag('move', e);
+  });
+}
+
+function startInlineBarEdit(el, bar) {
+  const prev = el.textContent;
+  el.textContent = '';
+  const inp = document.createElement('input');
+  inp.className = 'bar-input';
+  inp.value = bar.label;
+  el.appendChild(inp);
+  inp.focus(); inp.select();
+  const save = () => {
+    bar.label = inp.value.trim() || prev;
+    if (el.contains(inp)) el.removeChild(inp);
+    el.textContent = bar.label;
+    el.title = bar.label;
+    saveToStorage();
+  };
+  inp.onblur = save;
+  inp.onkeydown = e => {
+    if (e.key === 'Enter')  { e.preventDefault(); inp.blur(); }
+    if (e.key === 'Escape') { bar.label = prev; if (el.contains(inp)) el.removeChild(inp); el.textContent = prev; }
+    e.stopPropagation();
+  };
+}
+
+// ── Persist to localStorage ──────────────────────────────────
+
+const STORAGE_KEY = 'gantt_rows_v3';
+
+function saveToStorage() {
+  const clean = CONFIG.rows.map(r => {
+    if (r.separator) return { separator: true };
+    const obj = {
+      category: r.category,
+      label: r.label,
+      bars: (r.bars || []).map(b => {
+        const bo = { start: b.start, end: b.end, color: b.color, label: b.label };
+        if (b.owner)  bo.owner  = b.owner;
+        if (b.status) bo.status = b.status;
+        return bo;
+      })
+    };
+    if (r.catColor) obj.catColor = r.catColor;
+    return obj;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+  localStorage.setItem('gantt_legend_v1', JSON.stringify(CONFIG.legend));
+  const now = new Date();
+  const stamp = now.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+    + ' ' + now.toLocaleTimeString('en-US', { hour:'numeric', minute:'2-digit', hour12:true });
+  localStorage.setItem('gantt_last_saved', stamp);
+  updateFooterStamp(stamp);
+  showToast('Saved ✓');
+}
+
+function updateFooterStamp(stamp) {
+  const el = document.getElementById('footerStamp');
+  if (el) el.textContent = stamp ? 'Last edited ' + stamp : '—';
+}
+
+function loadFromStorage() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return;
+  try { CONFIG.rows = JSON.parse(saved); } catch(e) {}
+  const savedLegend = localStorage.getItem('gantt_legend_v1');
+  if (savedLegend) { try { CONFIG.legend = JSON.parse(savedLegend); } catch(e) {} }
+}
+
+let _statusTimer;
+function showSaving() {
+  const s = document.getElementById('saveStatus');
+  if (s) { s.textContent = '● editing'; s.style.color = '#f97316'; }
+}
+function showToast(msg) {
+  const t = document.getElementById('saveToast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2000);
+  // Also update inline status chip
+  const s = document.getElementById('saveStatus');
+  if (s) {
+    s.textContent = '✓ saved';
+    s.style.color = '#16a34a';
+    clearTimeout(_statusTimer);
+    _statusTimer = setTimeout(() => { s.textContent = ''; }, 3000);
+  }
+}
+
+// ── Column resize ─────────────────────────────────────────────
+
+const COL_WIDTHS_KEY = 'gantt_colwidths_v1';
+const MIN_COL_W = 36;
+
+function startColResize(colIdx, e) {
+  e.preventDefault(); e.stopPropagation();
+  showSaving();
+  const startX = e.clientX;
+  const origW  = WEEK_WIDTHS[colIdx];
+  let pending  = false;
+
+  function onMove(e) {
+    const newW = Math.max(MIN_COL_W, origW + (e.clientX - startX));
+    WEEK_WIDTHS[colIdx] = newW;
+    recomputeWeekX();
+    if (!pending) {
+      pending = true;
+      requestAnimationFrame(() => { pending = false; render(); });
+    }
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup',   onUp);
+    saveColWidths();
+    showToast('Saved ✓');
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup',   onUp);
+}
+
+function saveColWidths() {
+  localStorage.setItem(COL_WIDTHS_KEY, JSON.stringify([...WEEK_WIDTHS]));
+}
+
+function loadColWidths() {
+  const s = localStorage.getItem(COL_WIDTHS_KEY);
+  if (!s) return;
+  try {
+    const widths = JSON.parse(s);
+    if (widths.length === NW) {
+      widths.forEach((w, i) => { WEEK_WIDTHS[i] = w; });
+      recomputeWeekX();
+    }
+  } catch(e) {}
+}
+
+// ── Todo view ────────────────────────────────────────────────
+
+const TODO_COLUMNS = [
+  { key: 'S2',   label: 'Squad 2',      css: 'cat-S2'  },
+  { key: 'S1',   label: 'Squad 1',      css: 'cat-S1'  },
+  { key: 'S3',   label: 'Squad 3',      css: 'cat-S3'  },
+  { key: 'S4',   label: 'Squad 4',      css: 'cat-S4'  },
+  { key: 'S0',   label: 'Squad 0',      css: 'cat-S0'  },
+  { key: 'PM',   label: 'Program Mgmt', css: null       },
+  { key: 'OTHER',label: 'Other',        css: null       },
+];
+
+// Status colours (matched to palettes)
+const STATUS_COLORS = {
+  'not started': '#475569',   // Slate grey
+  'in progress': '#FFAD33',   // Orange-70
+  'blocked':     '#E8382F',   // Red-60
+  'complete':    '#34C759',   // Emerald-60
+};
+
+// Map row category → todo column key (F0 excluded — phase bars aren't tasks)
+function categoryToColKey(cat) {
+  if (['S2','S1','S3','S4','S0'].includes(cat)) return cat;
+  if (['NFR','CM'].includes(cat)) return 'PM';
+  return 'OTHER';
+}
+
+// Column header bg colors (from CSS or fallback)
+const COL_HEADER_STYLES = {
+  S2:    { bg: '#1e3a8a', color: '#bfdbfe' },
+  S1:    { bg: '#0c4a6e', color: '#bae6fd' },
+  S3:    { bg: '#4c1d95', color: '#ddd6fe' },
+  S4:    { bg: '#7c2d12', color: '#fed7aa' },
+  S0:    { bg: '#064e3b', color: '#a7f3d0' },
+  PM:    { bg: '#374151', color: '#d1d5db' },
+  OTHER: { bg: '#1e293b', color: '#94a3b8' },
+};
+
+function renderTodoView() {
+  const container = document.getElementById('todoView');
+  container.innerHTML = '';
+
+  // Get phases from F0 row bars (F0 bars are phases, not tasks)
+  const f0Row = CONFIG.rows.find(r => !r.separator && r.category === 'F0');
+  const phases = (f0Row && f0Row.bars) ? [...f0Row.bars].sort((a, b) => a.start - b.start) : [];
+
+  if (!phases.length) {
+    container.innerHTML = '<div style="color:#475569;padding:40px;text-align:center;">No phases defined. Add bars to the Phases row.</div>';
+    return;
+  }
+
+  phases.forEach(phase => {
+    const section = document.createElement('div');
+    section.className = 'todo-phase';
+
+    // Phase header — no week range
+    const phaseHeader = document.createElement('div');
+    phaseHeader.className = 'todo-phase-header';
+    const dot = document.createElement('div');
+    dot.className = 'todo-phase-dot';
+    dot.style.background = phase.color || '#e2e8f0';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'todo-phase-title';
+    titleEl.textContent = phase.label;
+    phaseHeader.append(dot, titleEl);
+    section.appendChild(phaseHeader);
+
+    // Grid
+    const grid = document.createElement('div');
+    grid.className = 'todo-grid';
+
+    TODO_COLUMNS.forEach(col => {
+      const colEl = document.createElement('div');
+      colEl.className = 'todo-col';
+
+      // Column header
+      const hdr = document.createElement('div');
+      hdr.className = 'todo-col-header';
+      const style = COL_HEADER_STYLES[col.key] || COL_HEADER_STYLES.OTHER;
+      hdr.style.background = style.bg;
+      hdr.style.color       = style.color;
+      hdr.textContent = col.label;
+      colEl.appendChild(hdr);
+
+      // Column body — find tasks in this phase & column (exclude F0 rows)
+      const body = document.createElement('div');
+      body.className = 'todo-col-body';
+
+      const tasks = [];
+      CONFIG.rows.forEach(row => {
+        if (row.separator) return;
+        if (row.category === 'F0') return; // phases are not tasks
+        if (categoryToColKey(row.category) !== col.key) return;
+        (row.bars || []).forEach(bar => {
+          const barStart = bar.start;
+          const barEnd   = Math.floor(bar.end);
+          const phStart  = phase.start;
+          const phEnd    = Math.ceil(phase.end);
+          if (barStart <= phEnd && barEnd >= phStart) {
+            tasks.push({ rowLabel: row.label, bar });
+          }
+        });
+      });
+
+      if (tasks.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'todo-empty';
+        empty.textContent = '—';
+        body.appendChild(empty);
+      } else {
+        tasks.forEach(({ rowLabel, bar }) => {
+          const card = document.createElement('div');
+          card.className = 'todo-card';
+          card.style.cursor = 'pointer';
+          card.title = 'Click to edit';
+
+          const status = (bar.status || 'not started').toLowerCase();
+          const cdot = document.createElement('div');
+          cdot.className = 'todo-card-dot';
+          cdot.style.background = STATUS_COLORS[status] || STATUS_COLORS['not started'];
+
+          const textWrap = document.createElement('div');
+          textWrap.style.cssText = 'flex:1;min-width:0;';
+
+          const taskName = document.createElement('div');
+          taskName.style.cssText = 'font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+          taskName.textContent = bar.label || rowLabel || 'Untitled';
+
+          const meta = document.createElement('div');
+          meta.style.cssText = 'font-size:10px;color:#475569;margin-top:2px;display:flex;gap:6px;';
+          if (rowLabel) {
+            const rowSpan = document.createElement('span');
+            rowSpan.textContent = rowLabel;
+            meta.appendChild(rowSpan);
+          }
+          if (bar.owner) {
+            const ownerSpan = document.createElement('span');
+            ownerSpan.style.color = '#64748b';
+            ownerSpan.textContent = '· ' + bar.owner;
+            meta.appendChild(ownerSpan);
+          }
+
+          textWrap.append(taskName, meta);
+          card.append(cdot, textWrap);
+          card.addEventListener('click', () => showTodoEditModal(bar));
+          body.appendChild(card);
+        });
+      }
+
+      colEl.appendChild(body);
+      grid.appendChild(colEl);
+    });
+
+    section.appendChild(grid);
+    container.appendChild(section);
+  });
+}
+
+function showTodoEditModal(bar) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;display:flex;align-items:center;justify-content:center;';
+
+  const box = document.createElement('div');
+  box.style.cssText = 'background:#1e293b;border:1px solid #475569;border-radius:12px;padding:24px;width:340px;box-shadow:0 20px 60px rgba(0,0,0,0.6);';
+
+  const title = document.createElement('div');
+  title.style.cssText = 'font-size:13px;font-weight:700;color:#f1f5f9;margin-bottom:20px;';
+  title.textContent = 'Edit Task';
+  box.appendChild(title);
+
+  const fieldStyle = 'margin-bottom:16px;';
+  const labelStyle = 'display:block;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;';
+  const inputStyle = 'width:100%;background:#0f172a;border:1px solid #475569;color:#e2e8f0;border-radius:6px;padding:8px 10px;font-size:12px;outline:none;box-sizing:border-box;';
+
+  // Task field
+  const taskWrap = document.createElement('div');
+  taskWrap.style.cssText = fieldStyle;
+  const taskLabel = document.createElement('label');
+  taskLabel.style.cssText = labelStyle;
+  taskLabel.textContent = 'Task';
+  const taskInp = document.createElement('input');
+  taskInp.style.cssText = inputStyle;
+  taskInp.value = bar.label || '';
+  taskInp.placeholder = 'Task name';
+  taskWrap.append(taskLabel, taskInp);
+
+  // Owner field
+  const ownerWrap = document.createElement('div');
+  ownerWrap.style.cssText = fieldStyle;
+  const ownerLabel = document.createElement('label');
+  ownerLabel.style.cssText = labelStyle;
+  ownerLabel.textContent = 'Owner';
+  const ownerInp = document.createElement('input');
+  ownerInp.style.cssText = inputStyle;
+  ownerInp.value = bar.owner || '';
+  ownerInp.placeholder = 'Owner name';
+  ownerWrap.append(ownerLabel, ownerInp);
+
+  // Status field
+  const statusWrap = document.createElement('div');
+  statusWrap.style.cssText = fieldStyle;
+  const statusLabel = document.createElement('label');
+  statusLabel.style.cssText = labelStyle;
+  statusLabel.textContent = 'Status';
+
+  const statusOptions = ['not started', 'in progress', 'blocked', 'complete'];
+  const currentStatus = (bar.status || 'not started').toLowerCase();
+
+  const statusGrid = document.createElement('div');
+  statusGrid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:6px;';
+  statusOptions.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.style.cssText = `display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:6px;border:2px solid transparent;cursor:pointer;font-size:11px;font-weight:600;background:#0f172a;color:#94a3b8;transition:border-color 0.1s;text-transform:capitalize;`;
+    const sdot = document.createElement('div');
+    sdot.style.cssText = `width:8px;height:8px;border-radius:50%;background:${STATUS_COLORS[opt]};flex-shrink:0;`;
+    btn.append(sdot, document.createTextNode(opt));
+    if (opt === currentStatus) {
+      btn.style.borderColor = STATUS_COLORS[opt];
+      btn.style.color = '#f1f5f9';
+    }
+    btn.addEventListener('click', () => {
+      statusGrid.querySelectorAll('button').forEach(b => {
+        b.style.borderColor = 'transparent'; b.style.color = '#94a3b8';
+      });
+      btn.style.borderColor = STATUS_COLORS[opt];
+      btn.style.color = '#f1f5f9';
+      btn.dataset.selected = 'true';
+      statusGrid.dataset.value = opt;
+    });
+    if (opt === currentStatus) btn.dataset.selected = 'true';
+    statusGrid.appendChild(btn);
+  });
+  statusGrid.dataset.value = currentStatus;
+  statusWrap.append(statusLabel, statusGrid);
+
+  // Buttons
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:4px;';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.textContent = 'Cancel';
+  cancelBtn.style.cssText = 'background:#334155;color:#e2e8f0;border:none;border-radius:6px;padding:8px 16px;font-size:12px;cursor:pointer;';
+  cancelBtn.onclick = () => overlay.remove();
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Save';
+  saveBtn.style.cssText = 'background:#3b82f6;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:600;cursor:pointer;';
+  saveBtn.onclick = () => {
+    bar.label  = taskInp.value.trim() || bar.label;
+    bar.owner  = ownerInp.value.trim();
+    bar.status = statusGrid.dataset.value || 'not started';
+    saveToStorage();
+    overlay.remove();
+    render();
+    renderTodoView();
+  };
+  btnRow.append(cancelBtn, saveBtn);
+
+  box.append(taskWrap, ownerWrap, statusWrap, btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('mousedown', ev => { if (ev.target === overlay) overlay.remove(); });
+  taskInp.focus();
+  [taskInp, ownerInp].forEach(inp => inp.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') overlay.remove();
+    ev.stopPropagation();
+  }));
+}
+
+let currentView = 'gantt';
+
+function switchView(view) {
+  currentView = view;
+  const ganttWrapper = document.getElementById('wrapper');
+  const todoView     = document.getElementById('todoView');
+  const btnGantt     = document.getElementById('toggleGantt');
+  const btnTodo      = document.getElementById('toggleTodo');
+
+  if (view === 'gantt') {
+    ganttWrapper.style.display = 'flex';
+    todoView.style.display     = 'none';
+    btnGantt.classList.add('active');
+    btnTodo.classList.remove('active');
+  } else {
+    ganttWrapper.style.display = 'none';
+    todoView.style.display     = 'flex';
+    btnGantt.classList.remove('active');
+    btnTodo.classList.add('active');
+    renderTodoView();
+  }
+}
+
+// ── Init ─────────────────────────────────────────────────────
+loadFromStorage();
+loadColWidths();
+render();
+updateFooterStamp(localStorage.getItem('gantt_last_saved'));
+</script>
+<div class="save-toast" id="saveToast"></div>
+</body>
+</html>
